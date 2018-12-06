@@ -1,0 +1,28 @@
+#!/bin/sh
+set -e
+
+# Renew NonComposerComponentRegistration.php, di.xml and vendor_path.php in app/etc
+cp -p baseconfig/* app/etc
+
+DB_HOST=""
+if [ -f app/etc/env.php ] && [ ! -z "$(php -r """echo (include 'app/etc/env.php')['db']['connection']['default']['host'];""")" ]; then
+    DB_HOST=$(php -r "echo (include 'app/etc/env.php')['db']['connection']['default']['host'];")
+fi
+if [ ! -z "$MYSQL_HOST" ]; then
+    DB_HOST=${MYSQL_HOST}
+fi
+
+if [ ! -z "$DB_HOST" ]; then
+    until nc -z -v -w30 $DB_HOST 3306
+    do
+      echo "Waiting for database connection..."
+      sleep 30
+    done
+    su magento -s /bin/sh -c 'set_database_config'
+    su magento -s /bin/sh -c 'set_redis_config'
+    if [ ! -z "$BACKEND_FRONTNAME" ]; then
+      su magento -s /bin/sh -c "bin/magento setup:config:set -n --backend-frontname ${BACKEND_FRONTNAME}"
+    fi
+fi
+
+"$@"

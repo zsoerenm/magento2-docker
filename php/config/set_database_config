@@ -1,0 +1,33 @@
+#!/bin/sh
+set -e
+
+params=''
+
+if [ ! -z "$MYSQL_HOST" ]; then
+    params="$params --db-host ${MYSQL_HOST}"
+fi
+if [ ! -z "$MYSQL_DATABASE" ]; then
+    params="$params --db-name ${MYSQL_DATABASE}"
+fi
+if [ ! -z "$MYSQL_USER" ]; then
+    params="$params --db-user ${MYSQL_USER}"
+fi
+if [ ! -z "$MYSQL_PASSWORD" ]; then
+    params="$params --db-password ${MYSQL_PASSWORD}"
+fi
+if [ ! -z "$MYSQL_DB_ENGINE" ]; then
+    params="$params --db-engine ${MYSQL_DB_ENGINE}"
+fi
+if [ ! -z "$MYSQL_DB_PREFIX" ]; then
+    params="$params --db-prefix ${MYSQL_DB_PREFIX}"
+fi
+if [ ! -z "$MYSQL_DB_MODEL" ]; then
+    params="$params --db-model ${MYSQL_DB_MODEL}"
+fi
+if [ ! -z "$MYSQL_DB_INIT_STATEMENTS" ]; then
+    params="$params --db-init-statements ${MYSQL_DB_INIT_STATEMENTS}"
+fi
+
+if [ ! -z "$params" ]; then
+    bin/magento setup:config:set -n $params
+fi
