@@ -2,7 +2,7 @@ version: '3'
 services:
 
   sslproxy:
-    image: magento2-sslproxy
+    image: zsoerenm/magento2-sslproxy
     depends_on:
       - varnish
     ports:
@@ -16,7 +16,7 @@ services:
       - SERVER_NAME=localhost
 
   varnish:
-    image: magento2-varnish
+    image: zsoerenm/magento2-varnish:4
     depends_on:
       - web
 
@@ -24,7 +24,7 @@ services:
     image: redis:alpine
 
   web:
-    image: magento2-nginx
+    image: zsoerenm/magento2-nginx
     depends_on:
       - php
     volumes:
@@ -37,7 +37,7 @@ services:
       - SERVER_NAME=web
 
   php:
-    image: magento2-php
+    image: zsoerenm/magento2-php:2.2.6
     depends_on:
       - db
     volumes:
@@ -67,7 +67,7 @@ services:
       - MYSQL_PASSWORD=magento2
 
   cron:
-    image: magento2-php
+    image: zsoerenm/magento2-php:2.2.6
     depends_on:
       - db
     volumes:
