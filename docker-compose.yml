@@ -31,7 +31,7 @@ services:
       - mediadata:/var/www/html/pub/media:ro
       - appdata:/var/www/html:ro
 #      - ./src/app/code:/var/www/html/app/code:ro
-#      - ./src/vendor:/var/www/html/vendor:ro
+#      - ./src/vendor:/var/www/html/vendor/test:ro
     environment:
       - BACKEND_HOST=php
       - SERVER_NAME=web
@@ -45,7 +45,7 @@ services:
       - configdata:/var/www/html/app/etc
       - appdata:/var/www/html
 #      - ./src/app/code:/var/www/html/app/code
-#      - ./src/vendor:/var/www/html/vendor
+#      - ./src/vendor:/var/www/html/vendor/test
     environment:
       - DEFAULT_CACHE_REDIS_SERVER=redis
       - DEFAULT_CACHE_REDIS_DATABASE=1
