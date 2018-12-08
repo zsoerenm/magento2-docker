@@ -1,6 +1,22 @@
-FROM php:7.1-fpm-alpine3.8 as magento2-php-base
+FROM php:7.1.24-fpm-alpine3.8 as magento2-php-base
 
-LABEL maintainer="Soeren Zorn"
+ARG COMMIT="local-build"
+ARG DATE="1970-01-01T00:00:00Z"
+ARG URL="https://github.com/zsoerenm/magento2-docker"
+ARG VERSION="dirty"
+
+LABEL org.label-schema.schema-version="1.0" \
+    org.label-schema.build-date=$DATE \
+    org.label-schema.vendor="Soeren Zorn" \
+    org.label-schema.name="zsoerenm/magento2-php" \
+    org.label-schema.description="A PHP container with Magento 2" \
+    org.label-schema.version="$VERSION" \
+    org.label-schema.vcs-url=$URL \
+    org.label-schema.vcs-ref=$COMMIT
+
+ENV COMMIT "$COMMIT"
+ENV DATE "$DATE"
+ENV VERSION "$VERSION"
 
 ARG MAGENTO_USER_ID=1000
 ARG MAGENTO_GROUP_ID=1000

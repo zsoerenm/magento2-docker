@@ -1,0 +1,9 @@
+#!/bin/bash
+echo "[***] Build hook running"
+
+docker build \
+  --build-arg VERSION=$CACHE_TAG \
+  --build-arg COMMIT=$SOURCE_COMMIT \
+  --build-arg URL=$(git config --get remote.origin.url) \
+  --build-arg DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ") \
+  -t $IMAGE_NAME ./../
