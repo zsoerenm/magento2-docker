@@ -2,9 +2,10 @@
 echo "[***] Build hook running"
 
 docker build \
+  -f Dockerfile \
   --build-arg VERSION=$CACHE_TAG \
   --build-arg COMMIT=$SOURCE_COMMIT \
   --build-arg URL=$(git config --get remote.origin.url) \
   --build-arg DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ") \
   --target magento2-php \
-  -t $IMAGE_NAME ./../.
+  -t $IMAGE_NAME ./../
