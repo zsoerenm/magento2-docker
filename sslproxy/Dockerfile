@@ -14,10 +14,6 @@ LABEL org.label-schema.schema-version="1.0" \
     org.label-schema.vcs-url=$URL \
     org.label-schema.vcs-ref=$COMMIT
 
-ENV COMMIT "$COMMIT"
-ENV DATE "$DATE"
-ENV VERSION "$VERSION"
-
 COPY sslproxy/conf/default.conf.template /etc/nginx/conf.d/default.conf.template
 COPY sslproxy/conf/ssl-dhparams.pem /etc/nginx/ssl/ssl-dhparams.pem
 

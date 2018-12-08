@@ -14,10 +14,6 @@ LABEL org.label-schema.schema-version="1.0" \
     org.label-schema.vcs-url=$URL \
     org.label-schema.vcs-ref=$COMMIT
 
-ENV COMMIT "$COMMIT"
-ENV DATE "$DATE"
-ENV VERSION "$VERSION"
-
 COPY varnish/varnish-template.vcl /usr/local/etc/varnish/
 COPY varnish/docker-varnish-entrypoint /usr/local/bin/
 

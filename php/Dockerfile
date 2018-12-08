@@ -14,10 +14,6 @@ LABEL org.label-schema.schema-version="1.0" \
     org.label-schema.vcs-url=$URL \
     org.label-schema.vcs-ref=$COMMIT
 
-ENV COMMIT "$COMMIT"
-ENV DATE "$DATE"
-ENV VERSION "$VERSION"
-
 ARG MAGENTO_USER_ID=1000
 ARG MAGENTO_GROUP_ID=1000
 
