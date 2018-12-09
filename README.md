@@ -9,18 +9,18 @@ Yet another composition of Docker containers to run Magento 2.
 - Use Alpine Linux if possible
 - Follow best practices from [Docker](https://docs.docker.com/develop/develop-images/dockerfile_best-practices/)
 - Closely follow the installation guide from [Magento 2](https://devdocs.magento.com/guides/v2.1/install-gde/prereq/prereq-overview.html)
-- Aims to work on Linux, Mac (not tested yet) and Windows
+- Aims to work on **Linux**, **Mac** (not tested yet) and **Windows**
 - Easy deployment
 
 ## Containers
 
-- PHP: magento2-php based on [php:7-fpm-alpine](https://hub.docker.com/_/php/)
+- PHP: [zsoerenm/magento2-php](https://hub.docker.com/r/zsoerenm/magento2-php/) based on [php:7-fpm-alpine](https://hub.docker.com/_/php/)
 - MariaDB: [mariadb:10.2](https://hub.docker.com/_/mariadb/)
-- Nginx: magento2-nginx based on [nginx:alpine](https://hub.docker.com/_/nginx/)
+- Nginx: [zsoerenm/magento2-nginx](https://hub.docker.com/r/zsoerenm/magento2-nginx/) based on [nginx:alpine](https://hub.docker.com/_/nginx/)
 - Redis: [redis:alpine](https://hub.docker.com/_/redis/)
-- Cron: magento2-php based on [php:7-fpm-alpine](https://hub.docker.com/_/php/)
-- Varnish: magento2-varnish based on [cooptilleuls/varnish:4-alpine](https://hub.docker.com/r/cooptilleuls/varnish/)
-- SSL Proxy: magento2-sslproxy based on [nginx:alpine](https://hub.docker.com/_/nginx/)
+- Cron: [zsoerenm/magento2-php](https://hub.docker.com/r/zsoerenm/magento2-php/) based on [php:7-fpm-alpine](https://hub.docker.com/_/php/)
+- Varnish: [zsoerenm/magento2-varnish](https://hub.docker.com/r/zsoerenm/magento2-varnish/) based on [cooptilleuls/varnish:4-alpine](https://hub.docker.com/r/cooptilleuls/varnish/)
+- SSL Proxy: [zsoerenm/magento2-sslproxy](https://hub.docker.com/r/zsoerenm/magento2-sslproxy/) based on [nginx:alpine](https://hub.docker.com/_/nginx/)
 
 ## Getting Started
 
@@ -32,24 +32,21 @@ Recommended shell for Windows is Powershell.
 
 Yes, this repository supports HTTPS during local development. This serves the best practice that the development environment should as close as possible to the production environment. Moreover, web browsers behave in subtly different ways on HTTP vs HTTPS pages. The main difference: On an HTTPS page, any requests to load JavaScript from an HTTP URL will be blocked [[see Let's Encrypt: Certificates for localhost](https://letsencrypt.org/docs/certificates-for-localhost/)].
 
-The easiest way to create your own certificates is to use [mkcert](https://github.com/FiloSottile/mkcert). Generate a certificate for `localhost` and move both files into the `certs` directory. Adjust the names of the shared files for the `sslproxy` container in `docker-compose.yml` file according to file names that you just generated.
+The easiest way to create your own certificates is to use [mkcert](https://github.com/FiloSottile/mkcert). Generate a certificate for `localhost` and move both files into the `certs` directory. Adjust the sample names of the shared files for the `sslproxy` container in `docker-compose.yml` file according to file names that you just generated.
 
 #### Get your source code into the container
 
-By default the `php` container already ships with the Magento 2 source code. If you are happy with that, just go to the next section.
-If you'd like to modify the code, load the exact same version of Magento 2 into the `src` directory. You could for example copy the Magento 2 source code from the container to the host using
+By default the `php` container already ships with the Magento 2 source code. If you are happy with that, just go to the next section. Otherwise put your modified code into the `src` directory. Make sure that your code is compatible with the Magento 2 version that is inside the container. For reference: the `php` container has the same version as Magento 2 that's inside the container.
 
-```bash
-docker-compose up -d php
-docker cp $(docker-compose ps -q php):/var/www/html/. ./src/
-```
-(*Note:* If you use Windows you need to start the command line with administration permissions to copy symlinks and replace `$(docker-compose ps -q php)` with the id of the `php` container.)
+##### Development
 
-In the **development** environment mount the directories where you have modified code into the `php` and `web` container. In the `docker-compose.yml` you will find an example for `app/code` and `vendor` directory. I would not recommend to mount the whole folder into both containers, because of performance reasons.
+For ease of development mount your modified code into the `php` and `web` container. However, I do not recommend to mount the complete Magento 2 source code into the container, because of performance reasons. Instead only mount those folders into the container, where you actually have modified / added source code. In the `docker-compose.yml` file you will find examples for `app/code` and `vendor/<some_vendor>`. If you still persist to mount the complete Magento 2 source code into the container and if you are using Linux or Mac, make sure that your files on the host have the correct write permissions according to [Set ownership and permissions for two users](https://devdocs.magento.com/guides/v2.2/install-gde/prereq/file-system-perms.html#perms-private). The group ID of the source code should be 82. This does not matter for Windows users as Docker-for-Windows mounts the files with [permission 777](https://docs.docker.com/docker-for-windows/troubleshoot/#volumes) anyway.
+
+##### Production
 
 For the **production** environment it is instead recommended to copy the source code into the container and omit the mount from host to container. Moreover, this repository implements the [suggested pipeline deployment](https://devdocs.magento.com/guides/v2.2/config-guide/deployment/pipeline/technical-details.html) from Magento. It enables a fast deployment with a very short offline interval compared to the conventional deployment process. See the section "From development to production environment" below for further details.
 
-*Note:* The `php` container does not ship with `composer`. This is to keep the container as slim as possible. Any modification to the source code should be done on the host. You could still use the [official composer container](https://hub.docker.com/_/composer/) to install `composer` modules if you do not want to install `composer` on the host.
+*Note:* The `php` container does NOT ship with `composer`. This is to keep the container as slim as possible. Any modification to the source code should be done on the host. You could still use the [official composer container](https://hub.docker.com/_/composer/) to install `composer` modules if you do not want to install `composer` on the host.
 
 ### Usage
 
@@ -149,14 +146,22 @@ The database host is the name of the database container (default: `db`). The dat
 
 ### Install from an existing installation
 
-1. Copy your `app/etc/env.php` and `app/etc/config.php` from your previous installation into the new installation. For example
+1. Copy your `app/etc/env.php` and `app/etc/config.php` from your previous installation into the new installation. For example<br />
+*Linux and Mac:*
 ```bash
 docker cp ./src/app/etc/env.php $(docker-compose ps -q php):/var/www/html/app/etc/env.php
 docker cp ./src/app/etc/config.php $(docker-compose ps -q php):/var/www/html/app/etc/config.php
 docker-compose exec php chown magento:www-data app/etc/env.php app/etc/config.php
 docker-compose exec php chmod 664 app/etc/env.php app/etc/config.php
 ```
-(If you use Windows, replace `$(docker-compose ps -q php)` with the id of the `php` container.)
+*Windows:*
+```bash
+$phpid = $(docker-compose ps -q php)
+docker cp ./src/app/etc/env.php ${phpid}:/var/www/html/app/etc/env.php
+docker cp ./src/app/etc/config.php ${phpid}:/var/www/html/app/etc/config.php
+docker-compose exec php chown magento:www-data app/etc/env.php app/etc/config.php
+docker-compose exec php chmod 664 app/etc/env.php app/etc/config.php
+```
 2. Import the database (replace `PASSWORD` with the database root password, `DATABASE` with the database name (e.g. `magento2`) and `backup.sql` with the name of the database SQL file):
 ```bash
 cat backup.sql | docker exec -i $(docker-compose ps -q db) /usr/bin/mysql -u root --password=PASSWORD DATABASE

@@ -2,7 +2,7 @@ version: '3'
 services:
 
   sslproxy:
-    image: zsoerenm/magento2-sslproxy
+    image: zsoerenm/magento2-sslproxy:2.2.6
     depends_on:
       - varnish
     ports:
@@ -16,7 +16,7 @@ services:
       - SERVER_NAME=localhost
 
   varnish:
-    image: zsoerenm/magento2-varnish:4
+    image: zsoerenm/magento2-varnish:2.2.6
     depends_on:
       - web
 
@@ -24,14 +24,14 @@ services:
     image: redis:alpine
 
   web:
-    image: zsoerenm/magento2-nginx
+    image: zsoerenm/magento2-nginx:2.2.6
     depends_on:
       - php
     volumes:
       - mediadata:/var/www/html/pub/media:ro
       - appdata:/var/www/html:ro
 #      - ./src/app/code:/var/www/html/app/code:ro
-#      - ./src/vendor:/var/www/html/vendor/test:ro
+#      - ./src/vendor/<some_vendor>:/var/www/html/vendor/<some_vendor>:ro
     environment:
       - BACKEND_HOST=php
       - SERVER_NAME=web
@@ -45,7 +45,7 @@ services:
       - configdata:/var/www/html/app/etc
       - appdata:/var/www/html
 #      - ./src/app/code:/var/www/html/app/code
-#      - ./src/vendor:/var/www/html/vendor/test
+#      - ./src/vendor/<some_vendor>:/var/www/html/vendor/<some_vendor>
     environment:
       - DEFAULT_CACHE_REDIS_SERVER=redis
       - DEFAULT_CACHE_REDIS_DATABASE=1
