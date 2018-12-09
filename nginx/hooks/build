@@ -8,4 +8,4 @@ docker build \
   --build-arg URL=$(git config --get remote.origin.url) \
   --build-arg DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ") \
   --target magento2-nginx-base \
-  -t $IMAGE_NAME ./../
+  -t $DOCKER_REPO:${DOCKER_TAG//,/ -t $DOCKER_REPO:} ./../
