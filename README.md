@@ -38,6 +38,8 @@ The easiest way to create your own certificates is to use [mkcert](https://githu
 
 By default the `php` container already ships with the Magento 2 source code. If you are happy with that, just go to the next section. Otherwise put your modified code into the `src` directory. Make sure that your code is compatible with the Magento 2 version that is inside the container. For reference: the `php` container has the same version as Magento 2 that's inside the container.
 
+![Environments][manual/environments.png]
+
 ##### Development
 
 For ease of development mount your modified code into the `php` and `web` container. However, I do not recommend to mount the complete Magento 2 source code into the container, because of performance reasons. Instead only mount those folders into the container, where you actually have modified / added source code. In the `docker-compose.yml` file you will find examples for `app/code` and `vendor/<some_vendor>`. If you still persist to mount the complete Magento 2 source code into the container and if you are using Linux or Mac, make sure that your files on the host have the correct write permissions according to [Set ownership and permissions for two users](https://devdocs.magento.com/guides/v2.2/install-gde/prereq/file-system-perms.html#perms-private). The group ID of the source code should be 82. This does not matter for Windows users as Docker-for-Windows mounts the files with [permission 777](https://docs.docker.com/docker-for-windows/troubleshoot/#volumes) anyway.
