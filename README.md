@@ -38,7 +38,7 @@ The easiest way to create your own certificates is to use [mkcert](https://githu
 
 By default the `php` container already ships with the Magento 2 source code. If you are happy with that, just go to the next section. Otherwise put your modified code into the `src` directory. Make sure that your code is compatible with the Magento 2 version that is inside the container. For reference: the `php` container has the same version as Magento 2 that's inside the container.
 
-![Environments](manual/environments.svg)
+![Environments](https://github.com/zsoerenm/magento2-docker/raw/master/manual/environments.svg?sanitize=true)
 
 ##### Development
 
