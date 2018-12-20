@@ -14,7 +14,7 @@
    id="svg2"
    version="1.1"
    inkscape:version="0.48.4 r9939"
-   sodipodi:docname="Zeichnung.svg">
+   sodipodi:docname="Neues Dokument 1">
   <defs
      id="defs4" />
   <sodipodi:namedview
@@ -24,21 +24,21 @@
      borderopacity="1.0"
      inkscape:pageopacity="0.0"
      inkscape:pageshadow="2"
-     inkscape:zoom="0.35"
-     inkscape:cx="199.89494"
-     inkscape:cy="1158.9843"
+     inkscape:zoom="1.4"
+     inkscape:cx="193.05698"
+     inkscape:cy="691.93758"
      inkscape:document-units="px"
-     inkscape:current-layer="layer1"
+     inkscape:current-layer="g3347"
      showgrid="false"
      fit-margin-top="0"
      fit-margin-left="0"
      fit-margin-right="0"
      fit-margin-bottom="0"
-     inkscape:window-width="910"
-     inkscape:window-height="873"
-     inkscape:window-x="260"
-     inkscape:window-y="260"
-     inkscape:window-maximized="0" />
+     inkscape:window-width="2560"
+     inkscape:window-height="1377"
+     inkscape:window-x="-8"
+     inkscape:window-y="-8"
+     inkscape:window-maximized="1" />
   <metadata
      id="metadata7">
     <rdf:RDF>
@@ -55,9 +55,9 @@
      inkscape:label="Ebene 1"
      inkscape:groupmode="layer"
      id="layer1"
-     transform="translate(-150.10506,-299.09208)">
+     transform="translate(157.0378,163.76502)">
     <g
-       transform="matrix(1.25,0,0,-1.25,132.37303,1695.2312)"
+       transform="matrix(1.25,0,0,-1.25,-174.76983,1232.3741)"
        inkscape:label="dev_prod_environment"
        id="g2993">
       <g
@@ -773,9 +773,9 @@
                       <tspan
                          id="tspan3391"
                          sodipodi:role="line"
-                         y="0"
-                         x="0 4.4234123 9.4047318 14.94396 20.483189 25.464508 31.003736 35.985054 39.860523"
-                         style="font-size:9.96263981px;font-variant:normal;font-weight:normal;writing-mode:lr-tb;fill:#000000;fill-opacity:1;fill-rule:nonzero;stroke:none;font-family:LMRoman10;-inkscape-font-specification:LMRoman10-Regular">confgdata</tspan>
+                         x="0"
+                         style="font-size:9.96263981px;font-variant:normal;font-weight:normal;writing-mode:lr-tb;fill:#000000;fill-opacity:1;fill-rule:nonzero;stroke:none;font-family:LMRoman10;-inkscape-font-specification:LMRoman10-Regular"
+                         y="0">configdata</tspan>
                     </text>
                     <g
                        transform="translate(34.824,588.752)"
@@ -863,9 +863,9 @@
                       <tspan
                          id="tspan3439"
                          sodipodi:role="line"
-                         y="0"
-                         x="0 4.4234123 9.4047318 14.94396 20.483189 25.464508 31.003736 35.985054 39.860523"
-                         style="font-size:9.96263981px;font-variant:normal;font-weight:normal;writing-mode:lr-tb;fill:#000000;fill-opacity:1;fill-rule:nonzero;stroke:none;font-family:LMRoman10;-inkscape-font-specification:LMRoman10-Regular">confgdata</tspan>
+                         x="0"
+                         style="font-size:9.96263981px;font-variant:normal;font-weight:normal;writing-mode:lr-tb;fill:#000000;fill-opacity:1;fill-rule:nonzero;stroke:none;font-family:LMRoman10;-inkscape-font-specification:LMRoman10-Regular"
+                         y="0">configdata</tspan>
                     </text>
                     <g
                        transform="translate(715.139,624.02)"
