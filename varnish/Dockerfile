@@ -1,26 +1,31 @@
-FROM cooptilleuls/varnish:4.1.10-alpine3.8
+# Magento 2.4.7 is compatible with varnish 7.
+# See https://experienceleague.adobe.com/en/docs/commerce-operations/release/notes/magento-open-source/2-4-7
+# However, it is missing the varnish7.vcl configuration file.
+# Hence, let's get the configuration file from 2.4.8-beta1 for now.
+FROM varnish:7.6.1-alpine AS magento2-varnish
 
-ARG COMMIT="local-build"
-ARG DATE="1970-01-01T00:00:00Z"
-ARG URL="https://github.com/zsoerenm/magento2-docker"
-ARG VERSION="dirty"
+COPY --chmod=755 varnish/entrypoint /usr/local/bin/
+COPY varnish/proxy.patch /etc/varnish/
 
-LABEL org.label-schema.schema-version="1.0" \
-    org.label-schema.build-date=$DATE \
-    org.label-schema.vendor="Soeren Zorn" \
-    org.label-schema.name="zsoerenm/magento2-varnish" \
-    org.label-schema.description="A Varnish container for Magento 2" \
-    org.label-schema.version="$VERSION" \
-    org.label-schema.vcs-url=$URL \
-    org.label-schema.vcs-ref=$COMMIT
+ARG MAGENTO_VERSION=2.4.8-beta1
 
-COPY varnish/varnish-template.vcl /usr/local/etc/varnish/
-COPY varnish/docker-varnish-entrypoint /usr/local/bin/
+USER root
 
-RUN chmod 755 /usr/local/bin/docker-varnish-entrypoint
+RUN set -ex; \
+    apk add --no-cache patch && \
+    chown -R varnish:varnish /etc/varnish && \
+    wget -qO- https://github.com/magento/magento2/archive/refs/tags/${MAGENTO_VERSION}.tar.gz \
+    | tar xzfo - --strip-components=6 magento2-${MAGENTO_VERSION}/app/code/Magento/PageCache/etc/varnish7.vcl && \
+    chown varnish:varnish varnish7.vcl && \
+    mv varnish7.vcl varnish-template.vcl && \
+    patch varnish-template.vcl proxy.patch
 
-ENV BACKEND_HOST web
-ENV BACKEND_PORT 80
-ENV VARNISH_HOST web
-ENV SSL_OFFLOADED_HEADER X-Forwarded-Proto
-ENV GRACE_PERIOD 0
+USER varnish
+
+ENV BACKEND_HOST=web
+ENV BACKEND_PORT=80
+ENV VARNISH_HOST=web
+ENV SSL_OFFLOADED_HEADER=X-Forwarded-Proto
+ENV GRACE_PERIOD=0
+
+ENTRYPOINT ["/usr/local/bin/entrypoint"]

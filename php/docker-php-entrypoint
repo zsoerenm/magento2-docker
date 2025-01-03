@@ -1,28 +1,47 @@
 #!/bin/sh
 set -e
 
-# Renew NonComposerComponentRegistration.php, di.xml and vendor_path.php in app/etc
-cp -p baseconfig/* app/etc
-
-DB_HOST=""
-if [ -f app/etc/env.php ] && [ ! -z "$(php -r """echo (include 'app/etc/env.php')['db']['connection']['default']['host'];""")" ]; then
-    DB_HOST=$(php -r "echo (include 'app/etc/env.php')['db']['connection']['default']['host'];")
-fi
-if [ ! -z "$MYSQL_HOST" ]; then
-    DB_HOST=${MYSQL_HOST}
-fi
-
 if [ ! -z "$DB_HOST" ]; then
+    # Wait for database to become active
     until nc -z -v -w30 $DB_HOST 3306
     do
-      echo "Waiting for database connection..."
-      sleep 30
+    echo "Waiting for database connection..."
+    sleep 30
     done
-    su magento -s /bin/sh -c 'set_database_config'
-    su magento -s /bin/sh -c 'set_redis_config'
-    if [ ! -z "$BACKEND_FRONTNAME" ]; then
-      su magento -s /bin/sh -c "bin/magento setup:config:set -n --backend-frontname ${BACKEND_FRONTNAME}"
-    fi
+fi
+
+# Go through the list of possible arguments and check if a corresponding
+# environment variable exists. If yes add it to the list of arguments, that
+# is going to be used for `setup:install` or `setup:config:set`.
+# `setup:install` will be used if the file `app/etc/env.php` doesn't exist.
+# Here an example:
+# For the argument `--db-host` the environment variable `DB_HOST` is checked.
+
+magento_help=$(if [ -e app/etc/env.php ]; then \
+    php bin/magento setup:config:set --help
+else \
+    php bin/magento setup:install --help
+fi)
+
+args=""
+
+while read line 
+do
+    env_ref=$(echo $line | awk -v FS="(--|=)" '{print $2}' | awk '{ print toupper($0) }' | tr '-' '_')
+    env_var=$(eval echo \$$env_ref)
+    arg=$(echo $line | awk -F= '{print $1}')
+    [[ ! -z "$env_var" ]] && args="${args} $arg=${env_var}"
+done < <(echo "$magento_help" | sed 's/^[ \t]*//' | tr -d '[' | grep -- "^--.*=")
+
+if [ -e app/etc/env.php ]
+then
+    php bin/magento setup:config:set ${args}
+else
+    php bin/magento setup:install ${args}
+fi
+
+if [ ! -z "$CONFIG__DEFAULT__SYSTEM__SMTP__PASSWORD_UNENCRYPTED" ]; then
+    php bin/magento config:set system/smtp/password ${CONFIG__DEFAULT__SYSTEM__SMTP__PASSWORD_UNENCRYPTED}
 fi
 
 "$@"

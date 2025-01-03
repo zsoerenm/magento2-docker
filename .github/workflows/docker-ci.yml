@@ -1,0 +1,63 @@
+name: Build and Push Docker Image
+
+on:
+  pull_request:
+  release:
+    types: [published]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - dockerfile: ./php/Dockerfile
+            image: magento2-php
+            target: magento2-php
+          - dockerfile: ./nginx/Dockerfile
+            image: magento2-nginx
+            target: magento2-nginx
+          - dockerfile: ./varnish/Dockerfile
+            image: magento2-varnish
+            target: magento2-varnish
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Extract Docker image metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ vars.DOCKER_USERNAME }}/${{ matrix.image }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=match,pattern=v(.*),group=1
+            type=match,pattern=v(\d.\d.\d[-p\d]*),group=1
+            type=match,pattern=v(\d.\d.\d),group=1
+            type=match,pattern=v(\d.\d),group=1
+            type=match,pattern=v(\d),group=1
+            type=sha
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ vars.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ${{ matrix.dockerfile }}
+          target: ${{ matrix.target }}
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          annotations: ${{ steps.meta.outputs.annotations }}
+          provenance: true
+          sbom: true

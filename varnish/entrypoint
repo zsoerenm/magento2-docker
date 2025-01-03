@@ -1,0 +1,13 @@
+#!/bin/sh
+set -e
+
+sed \
+"s/\/\* {{ host }} \*\//${BACKEND_HOST}/g; \
+s/\/\* {{ port }} \*\//${BACKEND_PORT}/g; \
+s/\/\* {{ ips }} \*\//\"${VARNISH_HOST}\"\;/g; \
+s/\/\* {{ ssl_offloaded_header }} \*\//${SSL_OFFLOADED_HEADER}/g; \
+s/\/\* {{ design_exceptions_code }} \*\//${DESIGN_EXCEPTIONS_CODE}/g; \
+s/\/\* {{ grace_period }} \*\//${GRACE_PERIOD}/g" \
+/etc/varnish/varnish-template.vcl > /etc/varnish/default.vcl
+
+exec /usr/local/bin/docker-varnish-entrypoint "$@"

@@ -1,61 +1,65 @@
-version: '3'
 services:
 
-  sslproxy:
-    image: zsoerenm/magento2-sslproxy:2.2.6
-    depends_on:
-      - varnish
-    ports:
-      - "443:443"
-      - "80:80"
-    volumes:
-      - ./certs/localhost+2-key.pem:/etc/nginx/ssl/nginx.key
-      - ./certs/localhost+2.pem:/etc/nginx/ssl/nginx.crt
-    environment:
-      - BACKEND_HOST=varnish
-      - SERVER_NAME=localhost
-
-  varnish:
-    image: zsoerenm/magento2-varnish:2.2.6
-    depends_on:
-      - web
-
-  redis:
-    image: redis:alpine
-
-  web:
-    image: zsoerenm/magento2-nginx:2.2.6
-    depends_on:
-      - php
-    volumes:
-      - mediadata:/var/www/html/pub/media:ro
-      - appdata:/var/www/html:ro
-#      - ./src/app/code:/var/www/html/app/code:ro
-#      - ./src/vendor/<some_vendor>:/var/www/html/vendor/<some_vendor>:ro
-    environment:
-      - BACKEND_HOST=php
-      - SERVER_NAME=web
-
   php:
-    image: zsoerenm/magento2-php:2.2.6
+    image: zsoerenm/magento2-php:2.4.7-p3
     depends_on:
       - db
+      - opensearch
+      - redis
     volumes:
-      - mediadata:/var/www/html/pub/media
+      - pubdata:/var/www/html/pub
       - configdata:/var/www/html/app/etc
-      - appdata:/var/www/html
-#      - ./src/app/code:/var/www/html/app/code
 #      - ./src/vendor/<some_vendor>:/var/www/html/vendor/<some_vendor>
     environment:
-      - DEFAULT_CACHE_REDIS_SERVER=redis
-      - DEFAULT_CACHE_REDIS_DATABASE=1
+      - DB_HOST=db
+      - DB_USER=magento2
+      - DB_PASSWORD=magento2
+      - ADMIN_USER=admin
+      - ADMIN_PASSWORD=Very5tr0ngPassw0rd!
+      - ADMIN_EMAIL=admin_email_address
+      - ADMIN_FIRSTNAME=John
+      - ADMIN_LASTNAME=Doe
+      - CONFIG__DEFAULT__TRANS_EMAIL__IDENT_GENERAL__NAME=StoreName
+      - CONFIG__DEFAULT__TRANS_EMAIL__IDENT_GENERAL__EMAIL=smtp_email_address
+      - CONFIG__DEFAULT__SYSTEM__SMTP__TRANSPORT=smtp # sendmail, smtp
+      - CONFIG__DEFAULT__SYSTEM__SMTP__HOST=smtp_host
+      - CONFIG__DEFAULT__SYSTEM__SMTP__PORT=587
+      - CONFIG__DEFAULT__SYSTEM__SMTP__USERNAME=smtp_username
+      - CONFIG__DEFAULT__SYSTEM__SMTP__PASSWORD_UNENCRYPTED=smtp_password
+      - CONFIG__DEFAULT__SYSTEM__SMTP__AUTH=login # none, plain, login
+      - CONFIG__DEFAULT__SYSTEM__SMTP__SSL=tls # ssl, tls
+      # Set caching application to Varnish (=2) default is 1
+      - CONFIG__DEFAULT__SYSTEM__FULL_PAGE_CACHE__CACHING_APPLICATION=2
+      - CONFIG__DEFAULT__WEB__SECURE__USE_IN_ADMINHTML=1
+      - CONFIG__DEFAULT__WEB__SECURE__USE_IN_FRONTEND=1
+      # Firefox and Chrome do not upgrade to https automatically for localhost
+      # Hence, create a certificate for a url other than localhost (e.g. magento.local) and
+      # add a /etc/hosts entry like
+      # 127.0.0.1   magento.local
+      - CONFIG__DEFAULT__WEB__SECURE__ENABLE_UPGRADE_INSECURE=1
+      - CONFIG__DEFAULT__WEB__SECURE__ENABLE_HSTS=1
+      - CONFIG__DEFAULT__WEB__UNSECURE__BASE_URL=http://magento.local/
+      - CONFIG__DEFAULT__WEB__SECURE__BASE_URL=https://magento.local/
+      - SEARCH_ENGINE=opensearch
+      - OPENSEARCH_HOST=opensearch
+      - OPENSEARCH_ENABLE_AUTH=true
+      - OPENSEARCH_USERNAME=admin
+      - OPENSEARCH_PASSWORD=magento2
+      - CACHE_BACKEND=redis
+      - CACHE_BACKEND_REDIS_SERVER=redis
+      - CACHE_BACKEND_REDIS_DB=1
+      - PAGE_CACHE=redis
       - PAGE_CACHE_REDIS_SERVER=redis
-      - PAGE_CACHE_REDIS_DATABASE=2
-      - SESSION_REDIS_SERVER=redis
-      - SESSION_REDIS_DATABASE=3
+      - PAGE_CACHE_REDIS_DB=2
+      - SESSION_SAVE=redis
+      - SESSION_SAVE_REDIS_HOST=redis
+      - SESSION_SAVE_REDIS_DB=3
+
+  redis:
+    image: redis:7.4.1-alpine
 
   db:
-    image: mariadb:10.2
+    image: mariadb:10.6.20
     volumes:
       - dbdata:/var/lib/mysql
     healthcheck:
@@ -66,18 +70,74 @@ services:
       - MYSQL_USER=magento2
       - MYSQL_PASSWORD=magento2
 
-  cron:
-    image: zsoerenm/magento2-php:2.2.6
+  # Eventually make this a cluster.
+  # See https://opensearch.org/docs/latest/install-and-configure/install-opensearch/docker/
+  opensearch:
+    image: opensearchproject/opensearch:2.18.0
+    environment:
+      - discovery.type=single-node
+      - bootstrap.memory_lock=true
+      - "OPENSEARCH_JAVA_OPTS=-Xms512m -Xmx512m"
+      - OPENSEARCH_INITIAL_ADMIN_PASSWORD=Very5tr0ngPassw0rd!
+      - DISABLE_INSTALL_DEMO_CONFIG=true
+      - DISABLE_SECURITY_PLUGIN=true
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      nofile:
+        soft: 65536
+        hard: 65536
+    volumes:
+      - opensearchdata:/usr/share/opensearch/data
+
+  web:
+    image: zsoerenm/magento2-nginx:2.4.7-p3
     depends_on:
+      - php
+    volumes:
+      - pubdata:/var/www/html/pub:ro
+    # Enable port 80 here in order to upgrade from http to
+    # https automatically.
+    ports:
+      - 80:80
+    environment:
+      - BACKEND_HOST=php
+      - SERVER_NAME=web
+
+  varnish:
+    image: zsoerenm/magento2-varnish:2.4.7-p3
+    depends_on:
+      - web
+    tmpfs:
+      - /var/lib/varnish/varnishd:exec
+    environment:
+      - BACKEND_HOST=web
+      - BACKEND_PORT=80
+      - VARNISH_HOST=web
+
+  cron:
+    image: zsoerenm/magento2-php:2.4.7-p3
+    depends_on:
+      - php
       - db
     volumes:
-      - mediadata:/var/www/html/pub/media
+      - pubdata:/var/www/html/pub
       - configdata:/var/www/html/app/etc
-      - appdata:/var/www/html
     entrypoint: "su magento -s /bin/sh -c 'trap exit TERM; while :; do bin/magento cron:run; sleep 1m & wait $${!}; done;'"
+  
+  securetermination:
+    image: hitch:1.8.0
+    depends_on:
+      - varnish
+    volumes:
+      - ./certs/composedcert.pem:/etc/hitch/composedcert.pem:ro
+    ports:
+      - "443:443"
+    command: hitch -f "[*]:443" -b "[varnish]:8443" -u hitch -g hitch --alpn-protos="h2, http/1.1" --write-proxy-v2=on --ocsp-dir="/var/lib/hitch-ocsp" /etc/hitch/composedcert.pem
 
 volumes:
   dbdata:
-  appdata:
-  mediadata:
+  pubdata:
   configdata:
+  opensearchdata:
