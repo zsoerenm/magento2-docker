@@ -69,6 +69,7 @@ COPY --chmod=755 php/docker-php-entrypoint /usr/local/bin/docker-php-entrypoint
 # to `magento2-php` (e.g. `--target magento2-php`)
 FROM magento2-php-base AS magento2-php
 
+# renovate: datasource=github-tags depName=magento2 packageName=magento/magento2 versioning=composer
 ARG MAGENTO_VERSION=2.4.7-p3
 
 RUN set -ex; \

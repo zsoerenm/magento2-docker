@@ -1,5 +1,6 @@
 FROM nginx:1.27.3-alpine AS magento2-nginx
 
+# renovate: datasource=github-tags depName=magento2 packageName=magento/magento2 versioning=composer
 ARG MAGENTO_VERSION=2.4.7-p3
 
 COPY nginx/conf/default.conf.template /etc/nginx/templates/default.conf.template
