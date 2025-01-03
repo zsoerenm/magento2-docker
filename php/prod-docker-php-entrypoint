@@ -1,13 +1,7 @@
 #!/bin/sh
 set -e
 
-DB_HOST=""
-if [ -f app/etc/env.php ] && [ ! -z "$(php -r """echo (include 'app/etc/env.php')['db']['connection']['default']['host'];""")" ]; then
-    DB_HOST=$(php -r "echo (include 'app/etc/env.php')['db']['connection']['default']['host'];")
-fi
-if [ ! -z "$MYSQL_HOST" ]; then
-    DB_HOST=${MYSQL_HOST}
-fi
+/usr/local/bin/base-docker-php-entrypoint
 
 if [ ! -z "$DB_HOST" ]; then
   
@@ -16,8 +10,6 @@ if [ ! -z "$DB_HOST" ]; then
       echo "Waiting for database connection..."
       sleep 30
     done
-    su magento -s /bin/sh -c 'set_database_config'
-    su magento -s /bin/sh -c 'set_redis_config'
     su magento -s /bin/sh -c 'bin/magento maintenance:enable'
     su magento -s /bin/sh -c 'bin/magento deploy:mode:set production --skip-compilation'
     su magento -s /bin/sh -c 'bin/magento app:config:import'

@@ -5,5 +5,6 @@ server {
     listen 80;
     server_name ${SERVER_NAME};
     set $MAGE_ROOT /var/www/html;
+    set $MAGE_DEBUG_SHOW_ARGS 0;
     include /var/www/html/nginx.conf.sample;
 }

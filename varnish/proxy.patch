@@ -1,0 +1,25 @@
+--- varnish-template.vcl
++++ varnish-template-new.vcl
+@@ -1,6 +1,7 @@
+ # VCL version 5.0 is not supported so it should be 4.0 even though actually used Varnish version is 7
+ vcl 4.0;
+ 
++import proxy;
+ import std;
+ # The minimal Varnish version is 7.0
+ # For SSL offloading, pass the following header in your proxy server or load balancer: '/* {{ ssl_offloaded_header }} */: https'
+@@ -25,6 +26,14 @@
+ sub vcl_recv {
+     if (req.restarts > 0) {
+         set req.hash_always_miss = true;
++    }
++
++    if(!req.http.X-Forwarded-Proto) {
++        if (proxy.is_ssl()) {
++            set req.http.X-Forwarded-Proto = "https";
++        } else {
++            set req.http.X-Forwarded-Proto = "http";
++        }
+     }
+ 
+     if (req.method == "PURGE") {
