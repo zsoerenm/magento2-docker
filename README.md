@@ -8,25 +8,24 @@ Yet another composition of Docker containers to run Magento 2.
 - Use official containers if possible
 - Use Alpine Linux if possible
 - Follow best practices from [Docker](https://docs.docker.com/develop/develop-images/dockerfile_best-practices/)
-- Closely follow the installation guide from [Magento 2](https://devdocs.magento.com/guides/v2.1/install-gde/prereq/prereq-overview.html)
+- Closely follow the installation guide from [Magento 2](https://experienceleague.adobe.com/en/docs/commerce-operations/installation-guide/overview)
 - Aims to work on **Linux**, **Mac** (not tested yet) and **Windows**
 - Easy deployment
 
 ## Containers
 
-- PHP: [zsoerenm/magento2-php](https://hub.docker.com/r/zsoerenm/magento2-php/) based on [php:7-fpm-alpine](https://hub.docker.com/_/php/)
-- MariaDB: [mariadb:10.2](https://hub.docker.com/_/mariadb/)
+- PHP: [zsoerenm/magento2-php](https://hub.docker.com/r/zsoerenm/magento2-php/) based on [php:fpm-alpine](https://hub.docker.com/_/php/)
+- MariaDB: [mariadb](https://hub.docker.com/_/mariadb/)
 - Nginx: [zsoerenm/magento2-nginx](https://hub.docker.com/r/zsoerenm/magento2-nginx/) based on [nginx:alpine](https://hub.docker.com/_/nginx/)
 - Redis: [redis:alpine](https://hub.docker.com/_/redis/)
-- Cron: [zsoerenm/magento2-php](https://hub.docker.com/r/zsoerenm/magento2-php/) based on [php:7-fpm-alpine](https://hub.docker.com/_/php/)
-- Varnish: [zsoerenm/magento2-varnish](https://hub.docker.com/r/zsoerenm/magento2-varnish/) based on [cooptilleuls/varnish:4-alpine](https://hub.docker.com/r/cooptilleuls/varnish/)
-- SSL Proxy: [zsoerenm/magento2-sslproxy](https://hub.docker.com/r/zsoerenm/magento2-sslproxy/) based on [nginx:alpine](https://hub.docker.com/_/nginx/)
+- Cron: [zsoerenm/magento2-php](https://hub.docker.com/r/zsoerenm/magento2-php/) based on [php:fpm-alpine](https://hub.docker.com/_/php/)
+- Varnish: [zsoerenm/magento2-varnish](https://hub.docker.com/r/zsoerenm/magento2-varnish/) based on [varnish:alpine](https://hub.docker.com/_/varnish)
+- Opensearch: [opensearchproject/opensearch](https://hub.docker.com/r/opensearchproject/opensearch)
+- SSL / TLS Termination: [hitch](https://hub.docker.com/_/hitch)
 
 ## Getting Started
 
-### Prerequisities
-
-Recommended shell for Windows is Powershell.
+### Prerequisites
 
 #### HTTPS during local development
 
