@@ -16,7 +16,7 @@
   "packageRules": [
     {
       "matchPackageNames": ["mariadb"],
-      "allowedVersions": "<=10.4"
+      "allowedVersions": "<=10.6"
     },
     {
       "matchPackageNames": ["php"],
