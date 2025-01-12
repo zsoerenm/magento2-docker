@@ -35,7 +35,7 @@
       "allowedVersions": "<=7.2"
     },
     {
-      "matchPackageNames": ["opensearch"],
+      "matchPackageNames": ["opensearchproject/opensearch"],
       "allowedVersions": "<=2.12"
     },
     {
