@@ -7,9 +7,10 @@ services:
       - opensearch
       - redis
     volumes:
-      - pubdata:/var/www/html/pub
+      - staticdata:/var/www/html/pub/static
+      - mediadata:/var/www/html/pub/media
       - configdata:/var/www/html/app/etc
-#      - ./src/vendor/<some_vendor>:/var/www/html/vendor/<some_vendor>
+      - appdata:/var/www/html
     environment:
       - DB_HOST=db
       - DB_USER=magento2
@@ -56,7 +57,7 @@ services:
       - SESSION_SAVE_REDIS_DB=3
 
   redis:
-    image: redis:7.4.1-alpine
+    image: redis:7.2.7-alpine
 
   db:
     image: mariadb:10.6.20
@@ -73,7 +74,7 @@ services:
   # Eventually make this a cluster.
   # See https://opensearch.org/docs/latest/install-and-configure/install-opensearch/docker/
   opensearch:
-    image: opensearchproject/opensearch:2.18.0
+    image: opensearchproject/opensearch:2.12.0
     environment:
       - discovery.type=single-node
       - bootstrap.memory_lock=true
@@ -96,7 +97,8 @@ services:
     depends_on:
       - php
     volumes:
-      - pubdata:/var/www/html/pub:ro
+      - staticdata:/var/www/html/pub/static:ro
+      - mediadata:/var/www/html/pub/media:ro
     # Enable port 80 here in order to upgrade from http to
     # https automatically.
     ports:
@@ -122,7 +124,8 @@ services:
       - php
       - db
     volumes:
-      - pubdata:/var/www/html/pub
+      - staticdata:/var/www/html/pub/static
+      - mediadata:/var/www/html/pub/media
       - configdata:/var/www/html/app/etc
     entrypoint: "su magento -s /bin/sh -c 'trap exit TERM; while :; do bin/magento cron:run; sleep 1m & wait $${!}; done;'"
   
@@ -136,8 +139,22 @@ services:
       - "443:443"
     command: hitch -f "[*]:443" -b "[varnish]:8443" -u hitch -g hitch --alpn-protos="h2, http/1.1" --write-proxy-v2=on --ocsp-dir="/var/lib/hitch-ocsp" /etc/hitch/composedcert.pem
 
+  composer:
+    image: zsoerenm/magento2-composer:2.4.7-p3
+    volumes:
+      - appdata:/var/www/html
+    profiles:
+      - tools
+
 volumes:
   dbdata:
-  pubdata:
+  staticdata:
+  mediadata:
   configdata:
   opensearchdata:
+  appdata:
+    driver: local
+    driver_opts:
+      type: none
+      device: "./src"
+      o: bind

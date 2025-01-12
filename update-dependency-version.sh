@@ -34,6 +34,7 @@ setVersion "PHP" "php" $line_number
 setVersion "nginx" "nginx" $line_number
 setVersion "Redis" "redis" $line_number
 setVersion "OpenSearch" "opensearch" $line_number
+setVersion "Composer" "composer" $line_number
 
 
 
