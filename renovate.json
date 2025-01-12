@@ -1,0 +1,42 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended"
+  ],
+  "customManagers": [
+    {
+      "customType": "regex",
+      "description": "Update _VERSION variables in Dockerfiles",
+      "fileMatch": ["(^|/|\\.)Dockerfile$", "(^|/)Dockerfile\\.[^/]*$"],
+      "matchStrings": [
+        "# renovate: datasource=(?<datasource>[a-z-]+?)(?: depName=(?<depName>.+?))? packageName=(?<packageName>.+?)(?: versioning=(?<versioning>[a-z-]+?))?\\s(?:ENV|ARG) .+?_VERSION=(?<currentValue>.+?)\\s"
+      ]
+    }
+  ],
+  "packageRules": [
+    {
+      "matchPackageNames": ["mariadb"],
+      "allowedVersions": "<=10.6"
+    },
+    {
+      "matchPackageNames": ["php"],
+      "allowedVersions": "<=8.3"
+    },
+    {
+      "matchPackageNames": ["varnish"],
+      "allowedVersions": "<=7.5"
+    },
+    {
+      "matchPackageNames": ["nginx"],
+      "allowedVersions": "<=1.24"
+    },
+    {
+      "matchPackageNames": ["redis"],
+      "allowedVersions": "<=7.2"
+    },
+    {
+      "matchPackageNames": ["opensearch"],
+      "allowedVersions": "<=2.12"
+    }
+  ]
+}
