@@ -21,6 +21,9 @@ jobs:
           - dockerfile: ./varnish/Dockerfile
             image: magento2-varnish
             target: magento2-varnish
+          - dockerfile: ./composer/Dockerfile
+            image: magento2-composer
+            target: magento2-composer
 
     steps:
       - name: Checkout

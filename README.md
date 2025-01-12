@@ -10,6 +10,7 @@ Yet another composition of Docker containers to run Magento 2.
 - Follow best practices from [Docker](https://docs.docker.com/develop/develop-images/dockerfile_best-practices/)
 - Closely follow the installation guide from [Magento 2](https://experienceleague.adobe.com/en/docs/commerce-operations/installation-guide/overview)
 - Aims to work on **Linux**, **Mac** (not tested yet) and **Windows**
+- Configure SMTP server via environment variables to enable two-factor authentication (2FA) right from the start (no need to disable it)
 - Easy deployment
 
 ## Containers
@@ -47,19 +48,45 @@ The `composedcert.pem` will be used by the SSL / TLS termination in local develo
 
 #### Get your source code into the container
 
-By default, the `php` container already ships with the Magento 2 source code. If you are happy with that, just go to the next section. Otherwise, put your modified code into the `src` directory. Make sure that your code is compatible with the Magento 2 version that is inside the container. For reference: the `php` container has the same version as Magento 2 that's inside the container.
+By default, the `php` container already ships with the Magento 2 source code. In order to be able to modify the code outside the container, I use a neat little trick explained [here](https://stackoverflow.com/a/69081169/786406). Basically a named volume is used to get the source code onto the host, but the files are made available in the `./src` folder by directing Docker to use this folder instead of an internal folder. The magic bit in docker-compose.yml file is:
+
+```docker
+appdata:
+  driver: local
+  driver_opts:
+    type: none
+    device: "./src"
+    o: bind
+```
+
+There might be some issues with permissions, though.
+All the source files are owned by the user id `1000`. If you happen to have the same id on your host, then everything is fine.
+You can check with `id` in your command line.
+For me it returns something like
+
+```
+uid=1000(schoenbrod) gid=1000(schoenbrod)
+```
+
+If you don't have the id 1000, two options come into my mind:
+
+1. If you use VSCode for development, you could use an extension for VSCode to actually code inside the container: https://code.visualstudio.com/docs/devcontainers/containers
+2. Change the permissions to something like `sudo chmod -R 777 ./src`. Don't worry before going to production the docker build will care about the permissions anyway.
+
+##### Install packages via Composer
+
+The docker-compose.yml file also ships with a Composer service.
+You can use it to install packages via Composer:
+
+```shell
+docker-compose run composer require <package>
+```
 
 ![Environments](https://github.com/zsoerenm/magento2-docker/raw/master/manual/environments.svg?sanitize=true)
-
-##### Development
-
-For ease of development mount your modified code into the `php` and `web` container. However, I do not recommend mounting the complete Magento 2 source code into the container, because of performance reasons. Instead, only mount those folders into the container, where you actually have modified / added source code. In the `docker-compose.yml` file you will find examples for `app/code` and `vendor/<some_vendor>`. If you still persist to mount the complete Magento 2 source code into the container and if you are using Linux or Mac, make sure that your files on the host have the correct write permissions according to [Set ownership and permissions for two users](https://devdocs.magento.com/guides/v2.2/install-gde/prereq/file-system-perms.html#perms-private). The group ID of the source code should be 82. This does not matter for Windows users as Docker-for-Windows mounts the files with [permission 777](https://docs.docker.com/docker-for-windows/troubleshoot/#volumes) anyway.
 
 ##### Production
 
 For the **production** environment it is instead recommended copying the source code into the container and omit the mount from host to container. Moreover, this repository implements the [suggested pipeline deployment](https://devdocs.magento.com/guides/v2.2/config-guide/deployment/pipeline/technical-details.html) from Magento. It enables a fast deployment with a very short offline interval compared to the conventional deployment process. See the section "From development to production environment" below for further details.
-
-_Note:_ The `php` container does NOT ship with `composer`. This is to keep the container as slim as possible. Any modification to the source code should be done on the host. You could still use the [official composer container](https://hub.docker.com/_/composer/) to install `composer` modules if you do not want to install `composer` on the host.
 
 ### Usage
 
@@ -69,7 +96,7 @@ In a development environment simply run
 docker-compose up
 ```
 
-and head to `http://localhost/` (or whatever you set up under `SERVER_NAME` for the `sslproxy` container in `docker-compose.yml`). You should automatically be redirected to HTTPS.
+and head to `http://localhost/`. You should automatically be redirected to HTTPS.
 
 #### Environment Variables
 
@@ -92,6 +119,12 @@ Beyond that, you can also set any configuration which you would normally set in 
 _Note_: This is a great opportunity to get around the chicken-egg problem with two-factor authentication (2FA). Since v2.4.6
 Magento ships with SMTP integration, and you can set the appropriate configuration options up front (see the docker-compose.yml file for more explanation).
 
+If you'd like to set the language of the shop, you can do so by setting
+
+```
+LANGUAGE=en_US
+```
+
 You can list all installed languages with
 
 ```bash
@@ -112,6 +145,12 @@ Languages
 +--------------------------+-------+
 </details>
 For other languages, you'll need to install them.
+
+If you'd like to set the currency of the shop, you can do so by setting
+
+```
+CURRENCY=EUR
+```
 
 You can list all available currencies with
 
@@ -299,6 +338,12 @@ Currencies
 | Zimbabwean Dollar (1980–2008) (ZWD)         | ZWD  |
 +---------------------------------------------+------+
 </details>
+
+If you'd like to set the timezone of the shop, you can do so by setting
+
+```
+TIMEZONE=Europe/Berlin
+```
 
 You can list all available timezones with
 
@@ -765,78 +810,20 @@ You should see an output similar to
 - `BACKEND_HOST` - Required - Must be set to the varnish host
 - `SERVER_NAME` - Required - The server name that you'd like to type in the browser
 
-## Install Magento 2
-
-You can either install Magento 2 from scratch or start with existing database
-
-### Install from scratch
-
-There is nothing more to do other than starting docker-compose with `docker-compose up` and heading to https://localhost .
-You may also install Magento using the command line:
-
-```bash
-docker-compose exec php bin/magento setup:install
-```
-
-The database host is the name of the database container (default: `db`). The database username, password etc. is what you have set in `docker-compose.yml` file in the database section. Make sure that you set HTTPS for frontend and backend in the advanced settings.
-
-**Note:** If you use Varnish, the Browser output will "freeze" around 20% (at least for me) during the installation. But don't worry the installation will finish in the background. It's probably a bug in Magento. Simply browse to `http://localhost/` periodically in another tab to see if the installation has finished.
-
-### Install from an existing installation
-
-1. Copy your `app/etc/env.php` and `app/etc/config.php` from your previous installation into the new installation. For example<br />
-   _Linux and Mac:_
-
-```bash
-docker cp ./src/app/etc/env.php $(docker-compose ps -q php):/var/www/html/app/etc/env.php
-docker cp ./src/app/etc/config.php $(docker-compose ps -q php):/var/www/html/app/etc/config.php
-docker-compose exec php chown magento:nginx app/etc/env.php app/etc/config.php
-docker-compose exec php chmod 664 app/etc/env.php app/etc/config.php
-```
-
-_Windows:_
-
-```bash
-$phpid = $(docker-compose ps -q php)
-docker cp ./src/app/etc/env.php ${phpid}:/var/www/html/app/etc/env.php
-docker cp ./src/app/etc/config.php ${phpid}:/var/www/html/app/etc/config.php
-docker-compose exec php chown magento:nginx app/etc/env.php app/etc/config.php
-docker-compose exec php chmod 664 app/etc/env.php app/etc/config.php
-```
-
-2. Import the database (replace `PASSWORD` with the database root password, `DATABASE` with the database name (e.g. `magento2`) and `backup.sql` with the name of the database SQL file):
-
-```bash
-cat backup.sql | docker exec -i $(docker-compose ps -q db) /usr/bin/mysql -u root --password=PASSWORD DATABASE
-```
-
-3. Optionally adjust the MySQL host, database, user and password in `app/etc/env.php` by setting the following environment variables for the php container (see above) and restart the `php` container:
-
-- `MYSQL_HOST`
-- `MYSQL_DATABASE`
-- `MYSQL_USER`
-- `MYSQL_PASSWORD`
-
-4. Run
-
-```bash
-docker-compose exec php bin/magento setup:di:compile
-```
-
-(_Note:_ For me this throws the following RuntimeException: `Source class "\scopesConfigSourceAggregated" for "scopesConfigSourceAggregatedProxy" generation does not exist.` but it works anyway. If anyone comes up with a better solution, file an issue and let me know!)
-
 ## Backup MySQL database
 
 Linux and Mac:
 
 ```bash
-docker exec CONTAINER /usr/bin/mysqldump -u root --password=PASSWORD DATABASE > backup.sql
+docker-compose exec db /usr/bin/mysqldump -u magento2 --password=magento2 magento2 > backup.sql
 ```
+
+Replace `magento2` for user, password and database with whatever you've set in the docker-compose file.
 
 Windows:
 
 ```bash
-docker exec CONTAINER /usr/bin/mysqldump -u root --password=PASSWORD DATABASE | Set-Content backup.sql
+docker-compose exec db /usr/bin/mysqldump -u magento2 --password=magento2 magento2 | Set-Content backup.sql
 ```
 
 ## From development to production environment

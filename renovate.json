@@ -37,6 +37,10 @@
     {
       "matchPackageNames": ["opensearch"],
       "allowedVersions": "<=2.12"
+    },
+    {
+      "matchPackageNames": ["composer"],
+      "allowedVersions": "<=2.7"
     }
   ]
 }
