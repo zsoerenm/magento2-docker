@@ -815,6 +815,10 @@ You should see an output similar to
 - `BACKEND_HOST` - Required - Must be set to the varnish host
 - `SERVER_NAME` - Required - The server name that you'd like to type in the browser
 
+## Renovate
+
+The dependencies within this repository are automatically updated by Renovate. To ensure compatibility with dependencies like Redis, MariaDB, Varnish, etc., I wrote a little script (`update-dependency-version.sh`) that gets the latest compatibility list from https://experienceleague.adobe.com/en/docs/commerce-operations/installation-guide/system-requirements and passes it to the Renovate configuration `renovate.json`. This should keep the repository up to date while still maintaining compatibility.
+
 ## Backup MySQL database
 
 Linux and Mac:
