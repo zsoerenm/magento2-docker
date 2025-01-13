@@ -9,7 +9,6 @@ Yet another composition of Docker containers to run Magento 2.
 - Use Alpine Linux if possible
 - Follow best practices from [Docker](https://docs.docker.com/develop/develop-images/dockerfile_best-practices/)
 - Closely follow the installation guide from [Magento 2](https://experienceleague.adobe.com/en/docs/commerce-operations/installation-guide/overview)
-- Aims to work on **Linux**, **Mac** (not tested yet) and **Windows**
 - Configure SMTP server via environment variables to enable two-factor authentication (2FA) right from the start (no need to disable it)
 - Easy deployment
 
@@ -30,7 +29,7 @@ Yet another composition of Docker containers to run Magento 2.
 
 #### HTTPS during local development
 
-Yes, this repository supports HTTPS during local development. This serves the best practice that the development environment should as close as possible to the production environment. Moreover, web browsers behave in subtly different ways on HTTP vs HTTPS pages. The main difference: On an HTTPS page, any requests to load JavaScript from an HTTP URL will be blocked [[see Let's Encrypt: Certificates for localhost](https://letsencrypt.org/docs/certificates-for-localhost/)].
+Yes, this repository supports HTTPS for local development. This follows the best practice of keeping the development environment as close to the production environment as possible. Also, web browsers behave in subtly different ways on HTTP vs. HTTPS pages. The main difference: On an HTTPS page, all requests to load JavaScript from an HTTP URL are blocked [[see Let's Encrypt: Certificates for localhost](https://letsencrypt.org/docs/certificates-for-localhost/)].
 
 The easiest way to create your own certificates is to use [mkcert](https://github.com/FiloSottile/mkcert). Generate a certificate for `localhost` and / or a named URL like `magento.local` in the `certs` directory:
 
@@ -45,6 +44,12 @@ cat certs/key.pem certs/cert.pem certs/dhparams.pem > certs/composedcert.pem
 ```
 
 The `composedcert.pem` will be used by the SSL / TLS termination in local development by `hitch`.
+
+If you'd like to use a named URL like `magento.local` also make sure to add an entry to your `hosts` file (located at `/etc/hosts`):
+
+```
+127.0.0.1  magento.local
+```
 
 #### Get your source code into the container
 
@@ -820,12 +825,6 @@ docker-compose exec db /usr/bin/mysqldump -u magento2 --password=magento2 magent
 
 Replace `magento2` for user, password and database with whatever you've set in the docker-compose file.
 
-Windows:
-
-```bash
-docker-compose exec db /usr/bin/mysqldump -u magento2 --password=magento2 magento2 | Set-Content backup.sql
-```
-
 ## From development to production environment
 
 ### This is still WIP!
@@ -845,7 +844,7 @@ docker-compose exec php bin/magento app:config:dump
 docker cp $(docker-compose ps -q php):/var/www/html/app/etc/config.php ./src/app/etc/config.php
 ```
 
-(_Note:_ Replace `$(docker-compose ps -q php)` with the id of the php container if you use Windows) 3. Build the php container for production
+3. Build the php container for production
 
 ```bash
 docker build -f php/Dockerfile -t magento2-php-prod .
