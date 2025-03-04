@@ -70,7 +70,7 @@ COPY --chmod=755 php/docker-php-entrypoint /usr/local/bin/docker-php-entrypoint
 FROM magento2-php-base AS magento2-php
 
 # renovate: datasource=github-tags depName=magento2 packageName=magento/magento2 versioning=composer
-ARG MAGENTO_VERSION=2.4.7-p3
+ARG MAGENTO_VERSION=2.4.7-p4
 
 RUN set -ex; \
 	wget -qO- http://pubfiles.nexcess.net/magento/ce-packages/magento2-${MAGENTO_VERSION}.tar.gz \

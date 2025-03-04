@@ -8,7 +8,7 @@ COPY --chmod=755 varnish/entrypoint /usr/local/bin/
 COPY varnish/proxy.patch /etc/varnish/
 
 # renovate: datasource=github-tags depName=magento2 packageName=magento/magento2 versioning=composer
-ARG MAGENTO_VERSION=2.4.8-beta1
+ARG MAGENTO_VERSION=2.4.8-beta2
 
 USER root
 
