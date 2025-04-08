@@ -16,7 +16,7 @@
   "packageRules": [
     {
       "matchPackageNames": ["mariadb"],
-      "allowedVersions": "<=10.6"
+      "allowedVersions": "<=11.4"
     },
     {
       "matchPackageNames": ["php"],
@@ -32,11 +32,11 @@
     },
     {
       "matchPackageNames": ["redis"],
-      "allowedVersions": "<=7.2"
+      "allowedVersions": "<=Valkey 8"
     },
     {
       "matchPackageNames": ["opensearchproject/opensearch"],
-      "allowedVersions": "<=2.12"
+      "allowedVersions": "<=2.19"
     },
     {
       "matchPackageNames": ["composer"],
