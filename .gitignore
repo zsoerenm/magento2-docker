@@ -1,3 +1,4 @@
 certs/
 src/
+secrets/
 backup.sql

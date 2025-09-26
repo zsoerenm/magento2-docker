@@ -1,0 +1,72 @@
+(tls) {
+  encode gzip
+  tls /certs/cert.pem /certs/key.pem {
+    on_demand
+  }
+}
+
+localhost, magento.local {
+  import tls
+  
+  # Serve static assets directly from Caddy
+  @static path /static/*
+  route @static {
+    # Remove version numbers from static file paths
+    @versioned path_regexp ^/static/version\d+/(.*)$
+    rewrite @versioned /static/{re.1}
+    
+    # Set cache headers
+    header {
+      Cache-Control "public, max-age=31536000"
+      X-Frame-Options "SAMEORIGIN"
+    }
+    
+    # Try to serve the file directly, fallback to PHP if not found
+    root * /var/www/html/pub
+    @static_file file {path}
+    handle @static_file {
+      file_server
+    }
+    
+    # Fallback to PHP for dynamic static file generation
+    reverse_proxy varnish {
+      header_up X-Forwarded-Proto {scheme}
+      header_up X-Forwarded-For {remote}
+    }
+  }
+  
+  # Serve media files directly from Caddy
+  @media path /media/*
+  route @media {
+    # Block access to sensitive directories
+    @blocked_media path /media/customer/* /media/downloadable/* /media/import/* /media/custom_options/* /media/theme_customization/*.xml
+    handle @blocked_media {
+      respond 403
+    }
+    
+    # Set cache headers
+    header {
+      Cache-Control "public, max-age=31536000"  
+      X-Frame-Options "SAMEORIGIN"
+    }
+    
+    # Try to serve the file directly, fallback to PHP if not found
+    root * /var/www/html/pub
+    @media_file file {path}
+    handle @media_file {
+      file_server
+    }
+    
+    # Fallback to PHP for dynamic media processing
+    reverse_proxy varnish {
+      header_up X-Forwarded-Proto {scheme}
+      header_up X-Forwarded-For {remote}
+    }
+  }
+  
+  # All other requests go through the full stack
+  reverse_proxy varnish {
+    header_up X-Forwarded-Proto {scheme}
+    header_up X-Forwarded-For {remote}
+  }
+}

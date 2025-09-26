@@ -1,22 +1,43 @@
+secrets:
+  db_password:
+    file: ./secrets/db_password.txt
+  admin_password:
+    file: ./secrets/admin_password.txt
+  mysql_root_password:
+    file: ./secrets/mysql_root_password.txt
+  mysql_password:
+    file: ./secrets/mysql_password.txt
+  smtp_password:
+    file: ./secrets/smtp_password.txt
+
 services:
 
   php:
     image: zsoerenm/magento2-php:2.4.7-p3
+    restart: unless-stopped
     depends_on:
-      - db
-      - opensearch
-      - redis
+      db:
+        condition: service_healthy
+        restart: true
+      opensearch:
+        condition: service_started
+      redis:
+        condition: service_started
     volumes:
       - staticdata:/var/www/html/pub/static
       - mediadata:/var/www/html/pub/media
       - configdata:/var/www/html/app/etc
-      - appdata:/var/www/html
+      - ./src:/var/www/html
+    secrets:
+      - db_password
+      - admin_password
+      - smtp_password
     environment:
       - DB_HOST=db
       - DB_USER=magento2
-      - DB_PASSWORD=magento2
+      - DB_PASSWORD_FILE=/run/secrets/db_password
       - ADMIN_USER=admin
-      - ADMIN_PASSWORD=Very5tr0ngPassw0rd!
+      - ADMIN_PASSWORD_FILE=/run/secrets/admin_password
       - ADMIN_EMAIL=admin_email_address
       - ADMIN_FIRSTNAME=John
       - ADMIN_LASTNAME=Doe
@@ -26,7 +47,7 @@ services:
       - CONFIG__DEFAULT__SYSTEM__SMTP__HOST=smtp_host
       - CONFIG__DEFAULT__SYSTEM__SMTP__PORT=587
       - CONFIG__DEFAULT__SYSTEM__SMTP__USERNAME=smtp_username
-      - CONFIG__DEFAULT__SYSTEM__SMTP__PASSWORD_UNENCRYPTED=smtp_password
+      - CONFIG__DEFAULT__SYSTEM__SMTP__PASSWORD_UNENCRYPTED_FILE=/run/secrets/smtp_password
       - CONFIG__DEFAULT__SYSTEM__SMTP__AUTH=login # none, plain, login
       - CONFIG__DEFAULT__SYSTEM__SMTP__SSL=tls # ssl, tls
       # Set caching application to Varnish (=2) default is 1
@@ -37,15 +58,14 @@ services:
       # Hence, create a certificate for a url other than localhost (e.g. magento.local) and
       # add a /etc/hosts entry like
       # 127.0.0.1   magento.local
-      - CONFIG__DEFAULT__WEB__SECURE__ENABLE_UPGRADE_INSECURE=1
       - CONFIG__DEFAULT__WEB__SECURE__ENABLE_HSTS=1
-      - CONFIG__DEFAULT__WEB__UNSECURE__BASE_URL=http://magento.local/
-      - CONFIG__DEFAULT__WEB__SECURE__BASE_URL=https://magento.local/
+      - CONFIG__DEFAULT__WEB__UNSECURE__BASE_URL=/
+      - CONFIG__DEFAULT__WEB__SECURE__BASE_URL=/
       - SEARCH_ENGINE=opensearch
       - OPENSEARCH_HOST=opensearch
       - OPENSEARCH_ENABLE_AUTH=true
       - OPENSEARCH_USERNAME=admin
-      - OPENSEARCH_PASSWORD=magento2
+      - OPENSEARCH_PASSWORD=Very5tr0ngPassw0rd
       - CACHE_BACKEND=redis
       - CACHE_BACKEND_REDIS_SERVER=redis
       - CACHE_BACKEND_REDIS_DB=1
@@ -58,23 +78,38 @@ services:
 
   redis:
     image: redis:7.2.7-alpine
+    restart: unless-stopped
+    healthcheck:
+      test: redis-cli ping | grep PONG
+      interval: 10s
+      timeout: 5s
+      retries: 3
 
   db:
     image: mariadb:10.6.21
+    restart: unless-stopped
     volumes:
       - dbdata:/var/lib/mysql
     healthcheck:
-      test: 'mysqladmin ping --silent'
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      start_period: 10s
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    secrets:
+      - mysql_root_password
+      - mysql_password
     environment:
-      - MYSQL_ROOT_PASSWORD=magento2
+      - MYSQL_ROOT_PASSWORD_FILE=/run/secrets/mysql_root_password
       - MYSQL_DATABASE=magento2
       - MYSQL_USER=magento2
-      - MYSQL_PASSWORD=magento2
+      - MYSQL_PASSWORD_FILE=/run/secrets/mysql_password
 
   # Eventually make this a cluster.
   # See https://opensearch.org/docs/latest/install-and-configure/install-opensearch/docker/
   opensearch:
     image: opensearchproject/opensearch:2.12.0
+    restart: unless-stopped
     environment:
       - discovery.type=single-node
       - bootstrap.memory_lock=true
@@ -94,32 +129,38 @@ services:
 
   web:
     image: zsoerenm/magento2-nginx:2.4.7-p3
+    restart: unless-stopped
     depends_on:
       - php
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health_check.php"]
+      start_period: 5m
+      interval: 10s
+      timeout: 5s
+      retries: 3
     volumes:
       - staticdata:/var/www/html/pub/static:ro
       - mediadata:/var/www/html/pub/media:ro
-    # Enable port 80 here in order to upgrade from http to
-    # https automatically.
-    ports:
-      - 80:80
     environment:
       - BACKEND_HOST=php
       - SERVER_NAME=web
 
   varnish:
     image: zsoerenm/magento2-varnish:2.4.7-p3
+    restart: unless-stopped
     depends_on:
-      - web
+      web:
+        condition: service_healthy
     tmpfs:
       - /var/lib/varnish/varnishd:exec
     environment:
       - BACKEND_HOST=web
-      - BACKEND_PORT=80
+      - BACKEND_PORT=8080
       - VARNISH_HOST=web
 
   cron:
     image: zsoerenm/magento2-php:2.4.7-p3
+    restart: unless-stopped
     depends_on:
       - php
       - db
@@ -127,24 +168,46 @@ services:
       - staticdata:/var/www/html/pub/static
       - mediadata:/var/www/html/pub/media
       - configdata:/var/www/html/app/etc
-    entrypoint: "su magento -s /bin/sh -c 'trap exit TERM; while :; do bin/magento cron:run; sleep 1m & wait $${!}; done;'"
+    entrypoint: "/usr/bin/supercronic /etc/crontab"
   
   securetermination:
-    image: hitch:1.8.0
+    image: caddy:2.10.2-alpine
+    restart: unless-stopped
     depends_on:
       - varnish
+    healthcheck:
+      test: nc -z localhost 80 && nc -z localhost 443
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
     volumes:
-      - ./certs/composedcert.pem:/etc/hitch/composedcert.pem:ro
+      - ./certs/cert.pem:/certs/cert.pem:ro
+      - ./certs/key.pem:/certs/key.pem:ro
+      - ./caddy/conf:/etc/caddy
+      - caddy_data:/data
+      - caddy_config:/config
+      - staticdata:/var/www/html/pub/static:ro
+      - mediadata:/var/www/html/pub/media:ro
     ports:
+      - "80:80"
       - "443:443"
-    command: hitch -f "[*]:443" -b "[varnish]:8443" -u hitch -g hitch --alpn-protos="h2, http/1.1" --write-proxy-v2=on --ocsp-dir="/var/lib/hitch-ocsp" /etc/hitch/composedcert.pem
+      - "443:443/udp"
 
   composer:
     image: zsoerenm/magento2-composer:2.4.7-p3
     volumes:
-      - appdata:/var/www/html
+      - ./src:/var/www/html
     profiles:
       - tools
+  
+  autoheal:
+    image: willfarrell/autoheal
+    restart: unless-stopped
+    environment:
+      - AUTOHEAL_CONTAINER_LABEL=all
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
 
 volumes:
   dbdata:
@@ -152,9 +215,5 @@ volumes:
   mediadata:
   configdata:
   opensearchdata:
-  appdata:
-    driver: local
-    driver_opts:
-      type: none
-      device: "./src"
-      o: bind
+  caddy_data:
+  caddy_config:

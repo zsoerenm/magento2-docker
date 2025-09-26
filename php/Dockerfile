@@ -1,18 +1,12 @@
-FROM php:8.1.31-fpm-alpine3.20 AS magento2-php-base
+FROM php:8.3.25-fpm-alpine3.22 AS magento2-php-base
 
-ARG MAGENTO_USER_ID=1000
-ARG MAGENTO_GROUP_ID=1000
-ARG NGINX_USER_ID=101
-ARG NGINX_GROUP_ID=101
+ARG UID=1000
+ARG GID=1000
 
 RUN set -ex; \
-	addgroup -g "${MAGENTO_GROUP_ID}" -S magento \
-	&& adduser -u "${MAGENTO_USER_ID}" -D -S -G magento magento \
-	# Make www-data use the same uid and gid as nginx
-	&& deluser www-data \
-	&& addgroup -g "${NGINX_GROUP_ID}" -S www-data \
-	&& adduser -u "${NGINX_USER_ID}" -D -S -G www-data www-data \
-	&& adduser magento www-data \
+	deluser www-data \
+	&& addgroup -g $GID -S www-data \
+	&& adduser -S -D -H -u $UID -s /sbin/nologin -G www-data -g www-data www-data \
 	&& sed -i '/^magento/s/!/*/' /etc/shadow \
 	&& echo "date.timezone=${PHP_TIMEZONE:-UTC}" > $PHP_INI_DIR/conf.d/date_timezone.ini \
 	&& echo "memory_limit=${PHP_MEMORY_LIMIT:-2G}" > $PHP_INI_DIR/conf.d/memory_limit.ini \
@@ -21,11 +15,14 @@ RUN set -ex; \
 
 COPY php/config/opcache.ini $PHP_INI_DIR/conf.d/
 
+COPY --chown=www-data:www-data cron/crontab /etc/crontab
+
 # Install all necessary PHP extensions.
 # See https://experienceleague.adobe.com/en/docs/commerce-operations/installation-guide/prerequisites/php-settings
 # For some it is required to also add corresponding libraries.
 # In all cases the dev version is required for installation,
 # but can be removed after installation has finished.
+# Let's also install supercronic here for cron
 RUN set -ex; \
 	apk add --update --no-cache -t .php-rundeps \
 	icu \
@@ -35,6 +32,8 @@ RUN set -ex; \
 	libpng \
 	libzip \
 	libxml2 \
+	linux-headers \
+	supercronic \
 	&& apk add --update --no-cache -t .build-deps \
 	icu-dev \
 	freetype-dev \
@@ -70,7 +69,7 @@ COPY --chmod=755 php/docker-php-entrypoint /usr/local/bin/docker-php-entrypoint
 FROM magento2-php-base AS magento2-php
 
 # renovate: datasource=github-tags depName=magento2 packageName=magento/magento2 versioning=composer
-ARG MAGENTO_VERSION=2.4.7-p4
+ARG MAGENTO_VERSION=2.4.7-p3
 
 RUN set -ex; \
 	wget -qO- http://pubfiles.nexcess.net/magento/ce-packages/magento2-${MAGENTO_VERSION}.tar.gz \
@@ -79,8 +78,10 @@ RUN set -ex; \
 	&& find var generated vendor pub/static pub/media app/etc -type d -exec chmod g+ws {} + \
 	&& mkdir /var/www/html/baseconfig \
 	&& cp -p app/etc/* /var/www/html/baseconfig \
-	&& chown -R magento:www-data . \
+	&& chown -R www-data:www-data . \
 	&& chmod u+x bin/magento
+
+USER $UID
 
 # The following image creates the production environment
 FROM magento2-php AS magento2-php-builder
@@ -89,7 +90,7 @@ FROM magento2-php AS magento2-php-builder
 # This may be a whole Magento installation
 # or just the changed files.
 # Make sure the versions match, though.
-COPY --chown=magento:www-data ./src .
+COPY --chown=www-data:www-data ./src .
 
 RUN set -ex; \
 	find var generated vendor pub/static pub/media app/etc -type f -exec chmod 644 {} + \
@@ -113,6 +114,6 @@ RUN set -ex; \
 # It actually only copies all necessary files from the previous image
 FROM magento2-php-base
 
-COPY --from=magento2-php-builder --chown=magento:www-data /var/www/html /var/www/html
+COPY --from=magento2-php-builder --chown=www-data:www-data /var/www/html /var/www/html
 COPY --chmod=755 php/docker-php-entrypoint /usr/local/bin/base-docker-php-entrypoint
 COPY --chmod=755 php/prod-docker-php-entrypoint /usr/local/bin/docker-php-entrypoint
