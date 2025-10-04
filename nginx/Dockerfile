@@ -1,7 +1,7 @@
 FROM nginxinc/nginx-unprivileged:1.28.0-alpine AS magento2-nginx
 
 # renovate: datasource=github-tags depName=magento2 packageName=magento/magento2 versioning=composer
-ARG MAGENTO_VERSION=2.4.7-p4
+ARG MAGENTO_VERSION=2.4.8-p2
 
 COPY nginx/conf/default.conf.template /etc/nginx/templates/
 
