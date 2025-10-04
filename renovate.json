@@ -24,7 +24,7 @@
     },
     {
       "matchPackageNames": ["varnish"],
-      "allowedVersions": "<=7.6"
+      "allowedVersions": "<=7.5"
     },
     {
       "matchPackageNames": ["nginx"],
@@ -40,7 +40,7 @@
     },
     {
       "matchPackageNames": ["composer"],
-      "allowedVersions": "<=2.8"
+      "allowedVersions": "<=2.7"
     }
   ]
 }

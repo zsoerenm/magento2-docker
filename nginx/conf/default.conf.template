@@ -1,8 +1,9 @@
 upstream fastcgi_backend {
     server  ${BACKEND_HOST}:9000;
 }
+
 server {
-    listen 80;
+    listen 8080;
     server_name ${SERVER_NAME};
     set $MAGE_ROOT /var/www/html;
     set $MAGE_DEBUG_SHOW_ARGS 0;

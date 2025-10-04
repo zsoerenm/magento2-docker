@@ -5,7 +5,6 @@
 FROM varnish:7.6.1-alpine AS magento2-varnish
 
 COPY --chmod=755 varnish/entrypoint /usr/local/bin/
-COPY varnish/proxy.patch /etc/varnish/
 
 # renovate: datasource=github-tags depName=magento2 packageName=magento/magento2 versioning=composer
 ARG MAGENTO_VERSION=2.4.8-beta2
@@ -18,13 +17,12 @@ RUN set -ex; \
     wget -qO- https://github.com/magento/magento2/archive/refs/tags/${MAGENTO_VERSION}.tar.gz \
     | tar xzfo - --strip-components=6 magento2-${MAGENTO_VERSION}/app/code/Magento/PageCache/etc/varnish7.vcl && \
     chown varnish:varnish varnish7.vcl && \
-    mv varnish7.vcl varnish-template.vcl && \
-    patch varnish-template.vcl proxy.patch
+    mv varnish7.vcl varnish-template.vcl
 
 USER varnish
 
 ENV BACKEND_HOST=web
-ENV BACKEND_PORT=80
+ENV BACKEND_PORT=8080
 ENV VARNISH_HOST=web
 ENV SSL_OFFLOADED_HEADER=X-Forwarded-Proto
 ENV GRACE_PERIOD=0

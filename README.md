@@ -21,7 +21,8 @@ Yet another composition of Docker containers to run Magento 2.
 - Cron: [zsoerenm/magento2-php](https://hub.docker.com/r/zsoerenm/magento2-php/) based on [php:fpm-alpine](https://hub.docker.com/_/php/)
 - Varnish: [zsoerenm/magento2-varnish](https://hub.docker.com/r/zsoerenm/magento2-varnish/) based on [varnish:alpine](https://hub.docker.com/_/varnish)
 - Opensearch: [opensearchproject/opensearch](https://hub.docker.com/r/opensearchproject/opensearch)
-- SSL / TLS Termination: [hitch](https://hub.docker.com/_/hitch)
+- SSL / TLS Termination: [caddy:alpine](https://hub.docker.com/_/caddy)
+- Autoheal: [willfarrell/autoheal](https://hub.docker.com/r/willfarrell/autoheal) - Automatically restarts unhealthy containers
 
 ## Getting Started
 
@@ -37,13 +38,7 @@ The easiest way to create your own certificates is to use [mkcert](https://githu
 mkcert -key-file certs/key.pem -cert-file certs/cert.pem magento.local localhost
 ```
 
-and concatenate them to a single file together with the `dhparams.pem` (which already exists in the `certs` folder):
-
-```
-cat certs/key.pem certs/cert.pem certs/dhparams.pem > certs/composedcert.pem
-```
-
-The `composedcert.pem` will be used by the SSL / TLS termination in local development by `hitch`.
+The SSL / TLS termination is handled by Caddy, which will automatically use the `certs/key.pem` and `certs/cert.pem` files for HTTPS.
 
 If you'd like to use a named URL like `magento.local` also make sure to add an entry to your `hosts` file (located at `/etc/hosts`):
 
@@ -51,32 +46,30 @@ If you'd like to use a named URL like `magento.local` also make sure to add an e
 127.0.0.1  magento.local
 ```
 
+#### Secrets Management
+
+This setup uses Docker secrets to securely manage sensitive information like passwords. Create the following files in the `secrets/` directory:
+
+- `secrets/db_password.txt` - Database password for Magento user
+- `secrets/mysql_root_password.txt` - MySQL root password  
+- `secrets/admin_password.txt` - Magento admin password
+- `secrets/smtp_password.txt` - SMTP server password
+
+These secrets are automatically mounted into containers at `/run/secrets/` and used by the application.
+
 #### Get your source code into the container
 
-By default, the `php` container already ships with the Magento 2 source code. In order to be able to modify the code outside the container, I use a neat little trick explained [here](https://stackoverflow.com/a/69081169/786406). Basically a named volume is used to get the source code onto the host, but the files are made available in the `./src` folder by directing Docker to use this folder instead of an internal folder. The magic bit in docker-compose.yml file is:
+By default, the `php` container already ships with the Magento 2 source code. For development, you might want to have the source code on the host computer. You can either copy your existing Magento installation into the ./src folder or copy the code from the container.
 
-```docker
-appdata:
-  driver: local
-  driver_opts:
-    type: none
-    device: "./src"
-    o: bind
+```shell
+docker create --name temp-magento zsoerenm/magento2-php:latest && docker cp temp-magento:/var/www/html/. src/ && docker rm temp-magento
 ```
 
-There might be some issues with permissions, though.
-All the source files are owned by the user id `1000`. If you happen to have the same id on your host, then everything is fine.
-You can check with `id` in your command line.
-For me it returns something like
+After you've copied your files to the ./src folder, make sure that the group id of your files is 101 (that's the www-data group in the container)
 
+```shell
+sudo chgrp -R 101 ./src
 ```
-uid=1000(schoenbrod) gid=1000(schoenbrod)
-```
-
-If you don't have the id 1000, two options come into my mind:
-
-1. If you use VSCode for development, you could use an extension for VSCode to actually code inside the container: https://code.visualstudio.com/docs/devcontainers/containers
-2. Change the permissions to something like `sudo chmod -R 777 ./src`. Don't worry before going to production the docker build will care about the permissions anyway.
 
 ##### Install packages via Composer
 
@@ -121,8 +114,14 @@ Beyond that, you can also set any configuration which you would normally set in 
 
 - Example: `CONFIG__DEFAULT__GENERAL__STORE_INFORMATION__NAME=Foobar` - Optional - sets config for `general/store_information/name`
 
+**Secrets Support**: For sensitive data like passwords, you can use the `_FILE` suffix to read values from Docker secrets:
+
+- `DB_PASSWORD_FILE=/run/secrets/db_password` - Read database password from secret file
+- `ADMIN_PASSWORD_FILE=/run/secrets/admin_password` - Read admin password from secret file
+- `CONFIG__DEFAULT__SYSTEM__SMTP__PASSWORD_UNENCRYPTED_FILE=/run/secrets/smtp_password` - Read SMTP password from secret file
+
 _Note_: This is a great opportunity to get around the chicken-egg problem with two-factor authentication (2FA). Since v2.4.6
-Magento ships with SMTP integration, and you can set the appropriate configuration options up front (see the docker-compose.yml file for more explanation).
+Magento ships with SMTP integration, and you can set the appropriate configuration options up front using secrets (see the docker-compose.yml file for more explanation).
 
 If you'd like to set the language of the shop, you can do so by setting
 
@@ -798,6 +797,27 @@ docker-compose exec redis redis-cli monitor
 You should see an output similar to
 [experienceleague.adobe.com](https://experienceleague.adobe.com/en/docs/commerce-operations/configuration-guide/cache/redis/redis-pg-cache) (see Verify Redis connection)
 
+##### Health Monitoring & Auto-healing
+
+This setup includes comprehensive health monitoring and automatic healing capabilities:
+
+**Health Checks**: All services have health checks configured:
+- **PHP**: Monitors PHP-FPM process status
+- **Database**: Checks MySQL connectivity and initialization
+- **Redis**: Verifies Redis server response  
+- **Nginx**: Tests HTTP response on port 8080
+- **Caddy**: Validates port connectivity on 80 and 443
+- **Varnish**: Depends on healthy web service
+
+**Auto-healing**: The `autoheal` service automatically restarts any container that fails its health check, ensuring high availability and reducing manual intervention.
+
+You can monitor container health status with:
+```bash
+docker-compose ps
+```
+
+Healthy containers show "healthy" status, while problematic ones show "unhealthy".
+
 ##### Database
 
 - `MYSQL_ROOT_PASSWORD` - Optional, Required on first run
@@ -868,6 +888,12 @@ docker-compose up -f prod.docker-compose.yml
 
 ## Q&A
 
+- How do I find the admin URI?
+
+```bash
+docker-compose exec php php bin/magento info:adminuri
+```
+
 - The following error is thrown when php container for production is build
 
 ```bash
@@ -895,9 +921,7 @@ docker cp $(docker-compose ps -q php):/var/www/html/app/etc/config.php ./src/app
 
 ## Todos
 
-- Make Varnish optional (For PWA is does not really makes sense)
 - Add Let's encrypt example for production
-- Add Elasticsearch (since Magento 2.3 it will be supported by CE version)
 - Add a periodic MySQL backup
 
 ## License
