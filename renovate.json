@@ -16,19 +16,19 @@
   "packageRules": [
     {
       "matchPackageNames": ["mariadb"],
-      "allowedVersions": "<=10.6"
+      "allowedVersions": "<=11.4"
     },
     {
       "matchPackageNames": ["php"],
-      "allowedVersions": "<=8.3"
+      "allowedVersions": "<=8.4"
     },
     {
       "matchPackageNames": ["varnish"],
-      "allowedVersions": "<=7.5"
+      "allowedVersions": "<=7.7"
     },
     {
       "matchPackageNames": ["nginx"],
-      "allowedVersions": "<=1.26"
+      "allowedVersions": "<=1.28"
     },
     {
       "matchPackageNames": ["redis"],
@@ -36,11 +36,11 @@
     },
     {
       "matchPackageNames": ["opensearchproject/opensearch"],
-      "allowedVersions": "<=2.12"
+      "allowedVersions": "<=3"
     },
     {
       "matchPackageNames": ["composer"],
-      "allowedVersions": "<=2.7"
+      "allowedVersions": "<=2.8"
     }
   ]
 }
