@@ -31,8 +31,8 @@
       "allowedVersions": "<=1.28"
     },
     {
-      "matchPackageNames": ["redis"],
-      "allowedVersions": "<=7.2"
+      "matchPackageNames": ["valkey"],
+      "allowedVersions": "<=8"
     },
     {
       "matchPackageNames": ["opensearchproject/opensearch"],

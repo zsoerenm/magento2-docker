@@ -14,14 +14,14 @@ services:
 
   php:
     image: zsoerenm/magento2-php:2.4.7-p3
-    restart: unless-stopped
+    #restart: unless-stopped
     depends_on:
       db:
         condition: service_healthy
         restart: true
       opensearch:
         condition: service_started
-      redis:
+      valkey:
         condition: service_started
     volumes:
       - staticdata:/var/www/html/pub/static
@@ -66,21 +66,23 @@ services:
       - OPENSEARCH_ENABLE_AUTH=true
       - OPENSEARCH_USERNAME=admin
       - OPENSEARCH_PASSWORD=Very5tr0ngPassw0rd
+      # Change these values to valkey in 2.4.9
+      # see https://experienceleague.adobe.com/en/docs/commerce-operations/configuration-guide/cache/valkey/valkey-pg-cache#
       - CACHE_BACKEND=redis
-      - CACHE_BACKEND_REDIS_SERVER=redis
+      - CACHE_BACKEND_REDIS_SERVER=valkey
       - CACHE_BACKEND_REDIS_DB=1
       - PAGE_CACHE=redis
-      - PAGE_CACHE_REDIS_SERVER=redis
+      - PAGE_CACHE_REDIS_SERVER=valkey
       - PAGE_CACHE_REDIS_DB=2
       - SESSION_SAVE=redis
-      - SESSION_SAVE_REDIS_HOST=redis
+      - SESSION_SAVE_REDIS_HOST=valkey
       - SESSION_SAVE_REDIS_DB=3
 
-  redis:
-    image: redis:7.2.7-alpine
+  valkey:
+    image: valkey/valkey:8.1.4-alpine
     restart: unless-stopped
     healthcheck:
-      test: redis-cli ping | grep PONG
+      test: valkey-cli ping | grep PONG
       interval: 10s
       timeout: 5s
       retries: 3
