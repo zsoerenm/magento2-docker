@@ -88,7 +88,7 @@ services:
       retries: 3
 
   db:
-    image: mariadb:10.6.21
+    image: mariadb:10.11.14
     restart: unless-stopped
     volumes:
       - dbdata:/var/lib/mysql
