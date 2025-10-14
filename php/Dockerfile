@@ -72,7 +72,7 @@ FROM magento2-php-base AS magento2-php
 COPY --from=composer:2.8.12 /usr/bin/composer /usr/bin/composer
 
 # renovate: datasource=github-tags depName=magento2 packageName=magento/magento2 versioning=composer
-ARG MAGENTO_VERSION=2.4.8-p2
+ARG MAGENTO_VERSION=2.4.8-p3
 
 RUN set -ex; \
 	wget -qO- https://github.com/magento/magento2/archive/refs/tags/${MAGENTO_VERSION}.tar.gz \
