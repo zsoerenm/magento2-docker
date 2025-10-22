@@ -32,7 +32,7 @@ setVersion "Varnish" "varnish" $line_number
 setVersion "MariaDB" "mariadb" $line_number
 setVersion "PHP" "php" $line_number
 setVersion "nginx" "nginx" $line_number
-setVersion "Valkey" "valkey" $line_number
+setVersion "Valkey" "valkey/valkey" $line_number
 setVersion "OpenSearch" "opensearchproject/opensearch" $line_number
 setVersion "Composer" "composer" $line_number
 
