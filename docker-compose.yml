@@ -79,7 +79,7 @@ services:
       - SESSION_SAVE_REDIS_DB=3
 
   valkey:
-    image: valkey/valkey:8.1.4-alpine
+    image: valkey/valkey:9.0.0-alpine
     restart: unless-stopped
     healthcheck:
       test: valkey-cli ping | grep PONG
