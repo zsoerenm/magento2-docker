@@ -31,7 +31,7 @@
       "allowedVersions": "<=1.28"
     },
     {
-      "matchPackageNames": ["valkey"],
+      "matchPackageNames": ["valkey/valkey"],
       "allowedVersions": "<=8"
     },
     {
