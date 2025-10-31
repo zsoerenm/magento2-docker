@@ -17,46 +17,13 @@ COPY php/config/opcache.ini $PHP_INI_DIR/conf.d/
 
 COPY --chown=www-data:www-data cron/crontab /etc/crontab
 
-# Install all necessary PHP extensions.
-# See https://experienceleague.adobe.com/en/docs/commerce-operations/installation-guide/prerequisites/php-settings
-# For some it is required to also add corresponding libraries.
-# In all cases the dev version is required for installation,
-# but can be removed after installation has finished.
-# Let's also install supercronic here for cron
-RUN set -ex; \
-	apk add --update --no-cache -t .php-rundeps \
-	icu \
-	freetype \
-	libxslt \
-	libjpeg-turbo \
-	libpng \
-	libzip \
-	libxml2 \
-	linux-headers \
-	supercronic \
-	&& apk add --update --no-cache -t .build-deps \
-	icu-dev \
-	freetype-dev \
-	libjpeg-turbo-dev \
-	libpng-dev \
-	libzip-dev \
-	libmcrypt-dev \
-	libxml2-dev \
-	libxslt-dev \
-	&& docker-php-ext-configure gd --with-freetype=/usr/include/ --with-jpeg=/usr/include/ \
-	&& docker-php-ext-install -j$(nproc) \
-	bcmath \
-	ftp \
-	gd \
-	intl \
-	opcache \
-	pdo_mysql \
-	sockets \
-	soap \
-	xsl \
-	zip \
-	&& docker-php-source delete \
-	&& apk del --purge .build-deps
+# Install all necessary PHP extensions based on composer.json
+# This script parses src/composer.json for ext-* requirements and installs them
+COPY scripts/install-php-extensions.sh /tmp/
+COPY src/composer.json /tmp/composer.json
+
+RUN /tmp/install-php-extensions.sh /tmp/composer.json \
+    && rm -f /tmp/install-php-extensions.sh /tmp/composer.json
 
 COPY --chmod=755 php/docker-php-entrypoint /usr/local/bin/docker-php-entrypoint
 
