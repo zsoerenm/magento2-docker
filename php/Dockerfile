@@ -69,18 +69,14 @@ COPY --chmod=755 php/docker-php-entrypoint /usr/local/bin/docker-php-entrypoint
 # to `magento2-php` (e.g. `--target magento2-php`)
 FROM magento2-php-base AS magento2-php
 
-COPY --from=composer:2.8.12 /usr/bin/composer /usr/bin/composer
-
 # renovate: datasource=github-tags depName=magento2 packageName=magento/magento2 versioning=composer
 ARG MAGENTO_VERSION=2.4.8-p3
+
+COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
 RUN set -ex; \
 	wget -qO- https://github.com/magento/magento2/archive/refs/tags/${MAGENTO_VERSION}.tar.gz \
 	| tar xzfo - --strip-components=1 \
-	&& find var generated vendor pub/static pub/media app/etc -type f -exec chmod g+w {} + \
-	&& find var generated vendor pub/static pub/media app/etc -type d -exec chmod g+ws {} + \
-	&& mkdir /var/www/html/baseconfig \
-	&& cp -p app/etc/* /var/www/html/baseconfig \
 	&& chown -R www-data:www-data . \
 	&& chmod u+x bin/magento \
 	&& composer install
@@ -91,9 +87,6 @@ USER $UID
 FROM magento2-php AS magento2-php-builder
 
 # Copy the source code over the existing code.
-# This may be a whole Magento installation
-# or just the changed files.
-# Make sure the versions match, though.
 COPY --chown=www-data:www-data ./src .
 
 RUN set -ex; \
