@@ -1,4 +1,4 @@
 certs/
-src/
 secrets/
 backup.sql
+.worktrees/
