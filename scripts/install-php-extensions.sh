@@ -151,7 +151,7 @@ fi
 echo "==> Validating extensions"
 VALIDATION_FAILED=0
 for ext in $REQUIRED_EXTENSIONS; do
-    if php -m | grep -q "^${ext}$"; then
+    if php -m | grep -iq "^${ext}$"; then
         echo "    ✓ $ext"
     else
         echo "    ✗ $ext (MISSING)" >&2
