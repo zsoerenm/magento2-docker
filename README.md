@@ -835,6 +835,19 @@ Healthy containers show "healthy" status, while problematic ones show "unhealthy
 - `BACKEND_HOST` - Required - Must be set to the varnish host
 - `SERVER_NAME` - Required - The server name that you'd like to type in the browser
 
+### PHP Extension Management
+
+PHP extensions required by Magento are automatically installed during Docker build based on `src/composer.json` requirements. The build process:
+
+1. Parses composer.json for `ext-*` entries
+2. Maps extensions to Alpine Linux packages
+3. Installs extensions with `docker-php-ext-install`
+4. Validates all extensions loaded successfully
+
+When upgrading Magento versions, extension requirements are automatically synchronized. No manual Dockerfile updates needed.
+
+See [docs/PHP_EXTENSIONS.md](docs/PHP_EXTENSIONS.md) for details.
+
 ## Renovate
 
 The dependencies within this repository are automatically updated by Renovate. To ensure compatibility with dependencies like Redis, MariaDB, Varnish, etc., I wrote a little script (`update-dependency-version.sh`) that gets the latest compatibility list from https://experienceleague.adobe.com/en/docs/commerce-operations/installation-guide/system-requirements and passes it to the Renovate configuration `renovate.json`. This should keep the repository up to date while still maintaining compatibility.
