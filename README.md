@@ -49,7 +49,7 @@ If you'd like to use a named URL like `magento.local` also make sure to add an e
 #### Download Magento source files
 
 ```shell
-wget -qO- https://github.com/magento/magento2/archive/refs/tags/${MAGENTO_VERSION}.tar.gz \
+wget -qO- https://github.com/magento/magento2/archive/refs/tags/$(cat .magento-version).tar.gz \
 	| tar xzfo - --strip-components=1 -C src/ \
 	&& docker compose run --rm composer install
 ```

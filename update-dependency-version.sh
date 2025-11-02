@@ -22,8 +22,7 @@ setVersion()
     sed -i "${renovate_line_number}s/.*/      \"allowedVersions\": \"<=$version\"/" renovate.json
 }
 
-magento_version_docker_line=$(cat php/Dockerfile | grep "ARG MAGENTO_VERSION")
-magento_version=${magento_version_docker_line#"ARG MAGENTO_VERSION="}
+magento_version=$(cat .magento-version)
 
 possible_magento_versions=`getValues "Software Dependencies"`
 line_number=`echo "$possible_magento_versions" | grep -xn $magento_version | cut -d : -f 1`

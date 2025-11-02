@@ -11,6 +11,18 @@
       "matchStrings": [
         "# renovate: datasource=(?<datasource>[a-z-]+?)(?: depName=(?<depName>.+?))? packageName=(?<packageName>.+?)(?: versioning=(?<versioning>[a-z-]+?))?\\s(?:ENV|ARG) .+?_VERSION=(?<currentValue>.+?)\\s"
       ]
+    },
+    {
+      "customType": "regex",
+      "description": "Update Magento version in .magento-version file",
+      "fileMatch": ["^\\.magento-version$"],
+      "matchStrings": [
+        "^(?<currentValue>.+?)\\s*$"
+      ],
+      "datasourceTemplate": "github-tags",
+      "depNameTemplate": "magento2",
+      "packageNameTemplate": "magento/magento2",
+      "versioningTemplate": "composer"
     }
   ],
   "packageRules": [
