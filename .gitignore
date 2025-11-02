@@ -1,4 +1,4 @@
 certs/
-secrets/
+docker/secrets/
 backup.sql
 .worktrees/

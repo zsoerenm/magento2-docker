@@ -34,7 +34,7 @@ jobs:
       - name: Generate next version
         id: version_generator
         run: |
-          magento_version_docker_line=$(cat php/Dockerfile | grep "ARG MAGENTO_VERSION")
+          magento_version_docker_line=$(cat docker/php/Dockerfile | grep "ARG MAGENTO_VERSION")
           magento_version=${magento_version_docker_line#"ARG MAGENTO_VERSION="}
           echo "nextversion=`git tag --sort=committerdate | \
             grep $magento_version | \

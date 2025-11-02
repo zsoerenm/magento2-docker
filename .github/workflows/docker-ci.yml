@@ -12,16 +12,16 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - dockerfile: ./php/Dockerfile
+          - dockerfile: ./docker/php/Dockerfile
             image: magento2-php
             target: magento2-php
-          - dockerfile: ./nginx/Dockerfile
+          - dockerfile: ./docker/nginx/Dockerfile
             image: magento2-nginx
             target: magento2-nginx
-          - dockerfile: ./varnish/Dockerfile
+          - dockerfile: ./docker/varnish/Dockerfile
             image: magento2-varnish
             target: magento2-varnish
-          - dockerfile: ./composer/Dockerfile
+          - dockerfile: ./docker/composer/Dockerfile
             image: magento2-composer
             target: magento2-composer
 

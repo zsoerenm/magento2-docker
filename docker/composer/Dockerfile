@@ -7,4 +7,4 @@ FROM magento2-php
 # renovate: datasource=docker depName=composer
 COPY --from=composer:2.8.12 /usr/bin/composer /usr/bin/composer
 
-COPY --chmod=755 composer/docker-composer-entrypoint /usr/local/bin/docker-php-entrypoint
+COPY --chmod=755 docker/composer/docker-composer-entrypoint /usr/local/bin/docker-php-entrypoint

@@ -5,7 +5,7 @@
 # the source files are mounted into the container.
 # This is different from the production environment further down
 # below which copies the files into the image.
-FROM php:8.3.25-fpm-alpine3.22 AS magento2-php
+FROM php:8.3.27-fpm-alpine3.22 AS magento2-php
 
 ARG UID=1000
 ARG GID=1000
@@ -20,19 +20,19 @@ RUN set -ex; \
 	&& echo "max_execution_time=${PHP_MAX_EXECUTION_TIME:-1800}" > $PHP_INI_DIR/conf.d/max_execution_time.ini \
 	&& echo "zlib.output_compression=${PHP_ZLIB_COMPRESSION:-On}" > $PHP_INI_DIR/conf.d/zlib_compression.ini
 
-COPY php/config/opcache.ini $PHP_INI_DIR/conf.d/
+COPY docker/php/config/opcache.ini $PHP_INI_DIR/conf.d/
 
-COPY --chown=www-data:www-data cron/crontab /etc/crontab
+COPY --chown=www-data:www-data docker/cron/crontab /etc/crontab
 
 # Install all necessary PHP extensions based on composer.json
 # This script parses src/composer.json for ext-* requirements and installs them
-COPY scripts/install-php-extensions.sh /tmp/
+COPY docker/php/install-php-extensions.sh /tmp/
 COPY src/composer.json /tmp/composer.json
 
 RUN /tmp/install-php-extensions.sh /tmp/composer.json \
 	&& rm -f /tmp/install-php-extensions.sh /tmp/composer.json
 
-COPY --chmod=755 php/docker-php-entrypoint /usr/local/bin/docker-php-entrypoint
+COPY --chmod=755 docker/php/docker-php-entrypoint /usr/local/bin/docker-php-entrypoint
 
 USER $UID
 
@@ -60,5 +60,5 @@ RUN set -ex; \
 	\( -type d -or -type f \) -exec chmod g-w {} \; \
 	&& chmod o-rwx app/etc/env.php
 
-COPY --chmod=755 php/docker-php-entrypoint /usr/local/bin/base-docker-php-entrypoint
-COPY --chmod=755 php/prod-docker-php-entrypoint /usr/local/bin/docker-php-entrypoint
+COPY --chmod=755 docker/php/docker-php-entrypoint /usr/local/bin/base-docker-php-entrypoint
+COPY --chmod=755 docker/php/prod-docker-php-entrypoint /usr/local/bin/docker-php-entrypoint

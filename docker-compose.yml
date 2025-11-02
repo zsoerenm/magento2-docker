@@ -1,21 +1,21 @@
 secrets:
   db_password:
-    file: ./secrets/db_password.txt
+    file: ./docker/secrets/db_password.txt
   admin_password:
-    file: ./secrets/admin_password.txt
+    file: ./docker/secrets/admin_password.txt
   mysql_root_password:
-    file: ./secrets/mysql_root_password.txt
+    file: ./docker/secrets/mysql_root_password.txt
   mysql_password:
-    file: ./secrets/mysql_password.txt
+    file: ./docker/secrets/mysql_password.txt
   smtp_password:
-    file: ./secrets/smtp_password.txt
+    file: ./docker/secrets/smtp_password.txt
 
 services:
 
   php:
     build:
       context: .
-      dockerfile: php/Dockerfile
+      dockerfile: docker/php/Dockerfile
     image: zsoerenm/magento2-php:2.4.7-p3
     restart: "${DOCKER_RESTART_POLICY:-unless-stopped}"
     depends_on:
@@ -133,7 +133,7 @@ services:
   web:
     build:
       context: .
-      dockerfile: nginx/Dockerfile
+      dockerfile: docker/nginx/Dockerfile
     image: zsoerenm/magento2-nginx:2.4.7-p3
     restart: "${DOCKER_RESTART_POLICY:-unless-stopped}"
     depends_on:
@@ -154,7 +154,7 @@ services:
   varnish:
     build:
       context: .
-      dockerfile: varnish/Dockerfile
+      dockerfile: docker/varnish/Dockerfile
     image: zsoerenm/magento2-varnish:2.4.7-p3
     restart: "${DOCKER_RESTART_POLICY:-unless-stopped}"
     depends_on:
@@ -170,7 +170,7 @@ services:
   cron:
     build:
       context: .
-      dockerfile: php/Dockerfile
+      dockerfile: docker/php/Dockerfile
     image: zsoerenm/magento2-php:2.4.7-p3
     restart: "${DOCKER_RESTART_POLICY:-unless-stopped}"
     depends_on:
@@ -195,7 +195,7 @@ services:
     volumes:
       - ./certs/cert.pem:/certs/cert.pem:ro
       - ./certs/key.pem:/certs/key.pem:ro
-      - ./caddy/conf:/etc/caddy
+      - ./docker/caddy/conf:/etc/caddy
       - caddy_data:/data
       - caddy_config:/config
       - "${DOCKER_MAGENTO_VOLUME:-mediadata:/var/www/html/pub/media:ro}"
