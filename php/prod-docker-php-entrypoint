@@ -4,18 +4,12 @@ set -e
 /usr/local/bin/base-docker-php-entrypoint
 
 if [ ! -z "$DB_HOST" ]; then
-  
-    until nc -z -v -w30 $DB_HOST 3306
-    do
-      echo "Waiting for database connection..."
-      sleep 30
-    done
-    su magento -s /bin/sh -c 'bin/magento maintenance:enable'
-    su magento -s /bin/sh -c 'bin/magento deploy:mode:set production --skip-compilation'
-    su magento -s /bin/sh -c 'bin/magento app:config:import'
-    su magento -s /bin/sh -c 'bin/magento setup:upgrade --keep-generated'
-    su magento -s /bin/sh -c 'bin/magento cache:flush'
-    su magento -s /bin/sh -c 'bin/magento maintenance:disable'
+    php bin/magento maintenance:enable
+    php bin/magento deploy:mode:set production --skip-compilation
+    php bin/magento app:config:import
+    php bin/magento setup:upgrade --keep-generated
+    php bin/magento cache:flush
+    php bin/magento maintenance:disable
 fi
 
 "$@"

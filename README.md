@@ -16,7 +16,7 @@ Yet another composition of Docker containers to run Magento 2.
 
 - PHP: [zsoerenm/magento2-php](https://hub.docker.com/r/zsoerenm/magento2-php/) based on [php:fpm-alpine](https://hub.docker.com/_/php/)
 - MariaDB: [mariadb](https://hub.docker.com/_/mariadb/)
-- Nginx: [zsoerenm/magento2-nginx](https://hub.docker.com/r/zsoerenm/magento2-nginx/) based on [nginx:alpine](https://hub.docker.com/_/nginx/)
+- Nginx: [zsoerenm/magento2-nginx](https://hub.docker.com/r/zsoerenm/magento2-nginx/) based on [nginxinc/nginx-unprivileged:alpine](https://hub.docker.com/r/nginxinc/nginx-unprivileged)
 - Redis: [redis:alpine](https://hub.docker.com/_/redis/)
 - Cron: [zsoerenm/magento2-php](https://hub.docker.com/r/zsoerenm/magento2-php/) based on [php:fpm-alpine](https://hub.docker.com/_/php/)
 - Varnish: [zsoerenm/magento2-varnish](https://hub.docker.com/r/zsoerenm/magento2-varnish/) based on [varnish:alpine](https://hub.docker.com/_/varnish)
@@ -46,12 +46,22 @@ If you'd like to use a named URL like `magento.local` also make sure to add an e
 127.0.0.1  magento.local
 ```
 
+#### Download Magento source files
+
+```shell
+wget -qO- https://github.com/magento/magento2/archive/refs/tags/${MAGENTO_VERSION}.tar.gz \
+	| tar xzfo - --strip-components=1 -C src/ \
+	&& docker compose run --rm composer install
+```
+
+The composer container will automatically install required PHP extensions defined in the composer file.
+
 #### Secrets Management
 
 This setup uses Docker secrets to securely manage sensitive information like passwords. Create the following files in the `secrets/` directory:
 
 - `secrets/db_password.txt` - Database password for Magento user
-- `secrets/mysql_root_password.txt` - MySQL root password  
+- `secrets/mysql_root_password.txt` - MySQL root password
 - `secrets/admin_password.txt` - Magento admin password
 - `secrets/smtp_password.txt` - SMTP server password
 
@@ -802,9 +812,10 @@ You should see an output similar to
 This setup includes comprehensive health monitoring and automatic healing capabilities:
 
 **Health Checks**: All services have health checks configured:
+
 - **PHP**: Monitors PHP-FPM process status
 - **Database**: Checks MySQL connectivity and initialization
-- **Redis**: Verifies Redis server response  
+- **Redis**: Verifies Redis server response
 - **Nginx**: Tests HTTP response on port 8080
 - **Caddy**: Validates port connectivity on 80 and 443
 - **Varnish**: Depends on healthy web service
@@ -812,6 +823,7 @@ This setup includes comprehensive health monitoring and automatic healing capabi
 **Auto-healing**: The `autoheal` service automatically restarts any container that fails its health check, ensuring high availability and reducing manual intervention.
 
 You can monitor container health status with:
+
 ```bash
 docker-compose ps
 ```

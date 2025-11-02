@@ -13,6 +13,9 @@ secrets:
 services:
 
   php:
+    build:
+      context: .
+      dockerfile: php/Dockerfile
     image: zsoerenm/magento2-php:2.4.7-p3
     restart: "${DOCKER_RESTART_POLICY:-unless-stopped}"
     depends_on:
@@ -128,6 +131,9 @@ services:
       - opensearchdata:/usr/share/opensearch/data
 
   web:
+    build:
+      context: .
+      dockerfile: nginx/Dockerfile
     image: zsoerenm/magento2-nginx:2.4.7-p3
     restart: "${DOCKER_RESTART_POLICY:-unless-stopped}"
     depends_on:
@@ -146,6 +152,9 @@ services:
       - SERVER_NAME=web
 
   varnish:
+    build:
+      context: .
+      dockerfile: varnish/Dockerfile
     image: zsoerenm/magento2-varnish:2.4.7-p3
     restart: "${DOCKER_RESTART_POLICY:-unless-stopped}"
     depends_on:
@@ -159,6 +168,9 @@ services:
       - VARNISH_HOST=web
 
   cron:
+    build:
+      context: .
+      dockerfile: php/Dockerfile
     image: zsoerenm/magento2-php:2.4.7-p3
     restart: "${DOCKER_RESTART_POLICY:-unless-stopped}"
     depends_on:
@@ -192,13 +204,6 @@ services:
       - "443:443"
       - "443:443/udp"
 
-  composer:
-    image: zsoerenm/magento2-composer:2.4.7-p3
-    volumes:
-      - ./src:/var/www/html
-    profiles:
-      - tools
-  
   autoheal:
     image: willfarrell/autoheal
     restart: "${DOCKER_RESTART_POLICY:-unless-stopped}"

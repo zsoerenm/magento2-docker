@@ -1,4 +1,11 @@
-FROM php:8.3.25-fpm-alpine3.22 AS magento2-php-base
+# The following creates the base and development environment.
+# If you want to build a development environment set the target
+# to `magento2-php` (e.g. `--target magento2-php`)
+# It doesn't contain any source files, because it is expected that
+# the source files are mounted into the container.
+# This is different from the production environment further down
+# below which copies the files into the image.
+FROM php:8.3.25-fpm-alpine3.22 AS magento2-php
 
 ARG UID=1000
 ARG GID=1000
@@ -23,35 +30,14 @@ COPY scripts/install-php-extensions.sh /tmp/
 COPY src/composer.json /tmp/composer.json
 
 RUN /tmp/install-php-extensions.sh /tmp/composer.json \
-    && rm -f /tmp/install-php-extensions.sh /tmp/composer.json
+	&& rm -f /tmp/install-php-extensions.sh /tmp/composer.json
 
 COPY --chmod=755 php/docker-php-entrypoint /usr/local/bin/docker-php-entrypoint
-
-# The following creates the development environment.
-# Compiling like bin/magento setup:di:compile
-# and setup:static-content:deploy are not necessary and
-# is actually discouraged
-# See https://experienceleague.adobe.com/en/docs/commerce-operations/performance-best-practices/development-environment
-# If you want to build a development environment set the target
-# to `magento2-php` (e.g. `--target magento2-php`)
-FROM magento2-php-base AS magento2-php
-
-# renovate: datasource=github-tags depName=magento2 packageName=magento/magento2 versioning=composer
-ARG MAGENTO_VERSION=2.4.8-p3
-
-COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
-
-RUN set -ex; \
-	wget -qO- https://github.com/magento/magento2/archive/refs/tags/${MAGENTO_VERSION}.tar.gz \
-	| tar xzfo - --strip-components=1 \
-	&& chown -R www-data:www-data . \
-	&& chmod u+x bin/magento \
-	&& composer install
 
 USER $UID
 
 # The following image creates the production environment
-FROM magento2-php AS magento2-php-builder
+FROM magento2-php
 
 # Copy the source code over the existing code.
 COPY --chown=www-data:www-data ./src .
@@ -74,10 +60,5 @@ RUN set -ex; \
 	\( -type d -or -type f \) -exec chmod g-w {} \; \
 	&& chmod o-rwx app/etc/env.php
 
-# This last image prunes all unnecessay files.
-# It actually only copies all necessary files from the previous image
-FROM magento2-php-base
-
-COPY --from=magento2-php-builder --chown=www-data:www-data /var/www/html /var/www/html
 COPY --chmod=755 php/docker-php-entrypoint /usr/local/bin/base-docker-php-entrypoint
 COPY --chmod=755 php/prod-docker-php-entrypoint /usr/local/bin/docker-php-entrypoint
