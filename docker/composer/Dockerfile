@@ -1,6 +1,9 @@
 # This Dockerfile depends on the magento2-php image built from php/Dockerfile.
-# Docker Compose automatically builds the php service first due to the depends_on
-# setting in docker-compose.override.yml, so you can simply run:
+# Docker Compose automatically builds the php service first using the
+# additional_contexts feature in docker-compose.override.yml:
+#   additional_contexts:
+#     magento2-php: service:php
+# This allows you to simply run:
 #   docker compose run --rm composer <command>
 FROM magento2-php
 

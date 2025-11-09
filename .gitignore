@@ -2,3 +2,4 @@ certs/
 docker/secrets/
 backup.sql
 .worktrees/
+.env

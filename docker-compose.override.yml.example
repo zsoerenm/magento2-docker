@@ -1,0 +1,37 @@
+# Development overrides for docker-compose.yml
+# This file is automatically merged with docker-compose.yml in development environments
+# It configures services to use development build targets and settings
+
+services:
+
+  php:
+    build:
+      target: magento2-php
+    pull_policy: build
+    image: magento2-php
+
+  web:
+    build:
+      target: magento2-nginx  # Development: stops at stage 1 (no static assets)
+    image: magento2-nginx
+
+  cron:
+    build:
+      target: magento2-php  # Development: same as php service
+    image: magento2-php
+
+  composer:
+    build:
+      context: .
+      dockerfile: docker/composer/Dockerfile
+      additional_contexts:
+        magento2-php: service:php
+    image: magento2-composer
+    volumes:
+      - ./src:/var/www/html
+    profiles:
+      - tools
+
+  autoheal:
+    profiles:
+      - production  # Disabled in development

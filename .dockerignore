@@ -1,0 +1,15 @@
+src/app/etc/env.php
+src/pub/media/catalog
+src/.buildpath
+src/.project
+src/.settings
+src/.vscode
+src/atlassian*
+src/nbproject
+src/.idea
+src/.github
+src/.gitattributes
+src/app/code/Magento/TestModule
+src/.grunt
+src/Gruntfile.js
+src/grunt-config.json
