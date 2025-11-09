@@ -1,17 +1,12 @@
-# Production Caddyfile - uses Let's Encrypt for automatic HTTPS
-# For development with mkcert, see Caddyfile.dev
+# Development Caddyfile - uses locally generated mkcert certificates
 
-{
-  email {$CADDY_EMAIL}
+(tls) {
+  encode gzip
+  tls /certs/cert.pem /certs/key.pem
 }
 
-{$DOMAIN} {
-  encode gzip
-
-  # Let's Encrypt automatic HTTPS
-  tls {
-    protocols tls1.2 tls1.3
-  }
+localhost, magento.local {
+  import tls
 
   # Reverse proxy all requests to Varnish
   # Varnish will handle caching and forward to the appropriate backend

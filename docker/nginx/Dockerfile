@@ -18,6 +18,8 @@ USER nginx
 # The following image creates the production environment.
 FROM magento2-nginx
 
+USER root
+
 # Copy the source code over the existing code.
 COPY --chown=nginx:nginx ./src/nginx.conf.sample .
 # Also copy php files from pub folder so that nginx thinks index.php, get.php, etc exists
@@ -26,3 +28,8 @@ COPY --chown=nginx:nginx ./src/nginx.conf.sample .
 # Media files need to shared via a named volume (see docker-compose file)
 COPY --chown=nginx:nginx ./src/pub/*.php .
 COPY --chown=nginx:nginx ./src/pub/**/*.php .
+
+# Enable production optimizations in nginx.conf.sample
+RUN sed -i 's/# expires max/expires max/g' nginx.conf.sample
+
+USER nginx

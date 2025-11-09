@@ -48,12 +48,13 @@ jobs:
           fi
 
           # Create secrets directory with dummy values for build
+          # Note: Magento requires passwords with both letters and numbers
           mkdir -p docker/secrets
-          echo "dummy_password_for_build" > docker/secrets/db_password.txt
-          echo "dummy_password_for_build" > docker/secrets/mysql_root_password.txt
-          echo "dummy_password_for_build" > docker/secrets/mysql_password.txt
-          echo "dummy_password_for_build" > docker/secrets/admin_password.txt
-          echo "dummy_password_for_build" > docker/secrets/smtp_password.txt
+          echo "DummyPassword123" > docker/secrets/db_password.txt
+          echo "DummyPassword123" > docker/secrets/mysql_root_password.txt
+          echo "DummyPassword123" > docker/secrets/mysql_password.txt
+          echo "Admin123456" > docker/secrets/admin_password.txt
+          echo "DummyPassword123" > docker/secrets/smtp_password.txt
 
           # Download Magento source code
           echo "📥 Downloading Magento source code..."
@@ -65,6 +66,17 @@ jobs:
 
           echo "✅ Magento source code downloaded"
 
+          # Fix permissions for composer (container runs as www-data UID 1000)
+          echo "🔧 Fixing permissions..."
+          sudo chown -R 1000:1000 src/
+
+          # Build required services for composer
+          echo "🔨 Building PHP service..."
+          docker compose build php
+
+          echo "🔨 Building composer service..."
+          docker compose build composer
+
           # Install Composer dependencies
           echo "📦 Installing Composer dependencies..."
           docker compose run --rm composer install
@@ -75,19 +87,34 @@ jobs:
         if: steps.check-source.outputs.magento_present == 'false'
         run: |
           echo "🐳 Starting Docker containers..."
-          docker compose up -d
+          echo "Docker Compose will handle startup order and healthchecks..."
+          echo "Note: Excluding securetermination (Caddy) - not needed for config generation"
 
-          echo "⏳ Waiting for containers to be healthy..."
-          # Wait for database to be ready
-          timeout 300 bash -c 'until docker compose exec -T db mysqladmin ping -h localhost --silent; do sleep 2; done'
-          echo "✅ Database is ready"
+          # Start all services except securetermination (needs certificates we don't have in CI)
+          # The --wait flag will wait for services with healthchecks to become healthy
+          if ! docker compose up -d --wait db opensearch valkey php web varnish cron; then
+            echo ""
+            echo "❌ Docker Compose failed to start containers"
+            echo ""
+            echo "=== Container status ==="
+            docker compose ps
+            echo ""
+            echo "=== PHP logs ==="
+            docker compose logs php --tail=100
+            echo ""
+            echo "=== Web logs ==="
+            docker compose logs web --tail=100
+            echo ""
+            echo "=== Database logs ==="
+            docker compose logs db --tail=50
+            echo ""
+            echo "=== OpenSearch logs ==="
+            docker compose logs opensearch --tail=50
+            exit 1
+          fi
 
-          # Wait for web service to be healthy (this verifies nginx + PHP-FPM are working together)
-          echo "⏳ Waiting for web service to be healthy..."
-          timeout 1000 bash -c 'until [ "$(docker compose ps web --format json | jq -r ".[0].Health")" = "healthy" ]; do sleep 5; done'
-          echo "✅ Web service is healthy"
-
-          echo "✅ All containers are running"
+          echo ""
+          echo "✅ All containers are running and healthy"
           docker compose ps
 
       - name: Generate config.php with scopes and themes

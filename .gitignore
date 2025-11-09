@@ -3,3 +3,4 @@ docker/secrets/
 backup.sql
 .worktrees/
 .env
+docker-compose.override.yml

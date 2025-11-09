@@ -14,12 +14,12 @@ Yet another composition of Docker containers to run Magento 2.
 
 ## Containers
 
-- PHP: [zsoerenm/magento2-php](https://hub.docker.com/r/zsoerenm/magento2-php/) based on [php:fpm-alpine](https://hub.docker.com/_/php/)
+- PHP: magento2-php based on [php:fpm-alpine](https://hub.docker.com/_/php/)
 - MariaDB: [mariadb](https://hub.docker.com/_/mariadb/)
-- Nginx: [zsoerenm/magento2-nginx](https://hub.docker.com/r/zsoerenm/magento2-nginx/) based on [nginxinc/nginx-unprivileged:alpine](https://hub.docker.com/r/nginxinc/nginx-unprivileged)
+- Nginx: magento2-nginx based on [nginxinc/nginx-unprivileged:alpine](https://hub.docker.com/r/nginxinc/nginx-unprivileged)
 - Redis: [redis:alpine](https://hub.docker.com/_/redis/)
-- Cron: [zsoerenm/magento2-php](https://hub.docker.com/r/zsoerenm/magento2-php/) based on [php:fpm-alpine](https://hub.docker.com/_/php/)
-- Varnish: [zsoerenm/magento2-varnish](https://hub.docker.com/r/zsoerenm/magento2-varnish/) based on [varnish:alpine](https://hub.docker.com/_/varnish)
+- Cron: magento2-php based on [php:fpm-alpine](https://hub.docker.com/_/php/)
+- Varnish: magento2-varnish based on [varnish:alpine](https://hub.docker.com/_/varnish)
 - Opensearch: [opensearchproject/opensearch](https://hub.docker.com/r/opensearchproject/opensearch)
 - SSL / TLS Termination: [caddy:alpine](https://hub.docker.com/_/caddy)
 - Autoheal: [willfarrell/autoheal](https://hub.docker.com/r/willfarrell/autoheal) - Automatically restarts unhealthy containers
@@ -38,13 +38,35 @@ The easiest way to create your own certificates is to use [mkcert](https://githu
 mkcert -key-file certs/key.pem -cert-file certs/cert.pem magento.local localhost
 ```
 
-The SSL / TLS termination is handled by Caddy, which will automatically use the `certs/key.pem` and `certs/cert.pem` files for HTTPS.
+The SSL / TLS termination is handled by Caddy, which will automatically use the `certs/key.pem` and `certs/cert.pem` files for HTTPS in development.
 
 If you'd like to use a named URL like `magento.local` also make sure to add an entry to your `hosts` file (located at `/etc/hosts`):
 
 ```
 127.0.0.1  magento.local
 ```
+
+#### HTTPS in Production
+
+For production deployments, this repository uses Let's Encrypt for automatic HTTPS certificate management. Caddy handles certificate provisioning and renewal automatically. The default Caddyfile is configured for production use with Let's Encrypt.
+
+**Configuration:**
+
+1. Set environment variables for Let's Encrypt in your production environment:
+
+   ```bash
+   export CADDY_EMAIL=your-email@example.com  # Required for Let's Encrypt notifications
+   export DOMAIN=yourdomain.com                # Your production domain
+   ```
+
+2. Ensure your domain's DNS A record points to your server's IP address.
+
+3. Deploy normally - Caddy will automatically obtain and renew certificates from Let's Encrypt.
+
+**Note:**
+
+- Port 80 must be accessible from the internet for Let's Encrypt HTTP-01 challenge validation.
+- For local development, docker-compose.override.yml automatically uses Caddyfile.dev with mkcert certificates.
 
 #### Download Magento source files
 
@@ -67,27 +89,13 @@ This setup uses Docker secrets to securely manage sensitive information like pas
 
 These secrets are automatically mounted into containers at `/run/secrets/` and used by the application.
 
-#### Get your source code into the container
-
-By default, the `php` container already ships with the Magento 2 source code. For development, you might want to have the source code on the host computer. You can either copy your existing Magento installation into the ./src folder or copy the code from the container.
-
-```shell
-docker create --name temp-magento zsoerenm/magento2-php:latest && docker cp temp-magento:/var/www/html/. src/ && docker rm temp-magento
-```
-
-After you've copied your files to the ./src folder, make sure that the group id of your files is 101 (that's the www-data group in the container)
-
-```shell
-sudo chgrp -R 101 ./src
-```
-
 ##### Install packages via Composer
 
 The docker-compose.yml file also ships with a Composer service.
 You can use it to install packages via Composer:
 
 ```shell
-docker-compose run composer require <package>
+docker compose run --rm composer require <package>
 ```
 
 ![Environments](https://github.com/zsoerenm/magento2-docker/raw/master/manual/environments.svg?sanitize=true)
@@ -884,13 +892,7 @@ The process is as follows:
 1. Dump your configuration on the development machine:
 
 ```bash
-docker-compose exec php bin/magento app:config:dump
-```
-
-2. Copy the `app/etc/config.php` to your development host
-
-```bash
-docker cp $(docker-compose ps -q php):/var/www/html/app/etc/config.php ./src/app/etc/config.php
+docker-compose exec php bin/magento app:config:dump scopes themes
 ```
 
 3. Build the php container for production
@@ -930,19 +932,7 @@ Deploy using quick strategy
   Default website is not defined
 ```
 
-_Answer:_ Make sure you have run `app:config:dump` (example: `docker-compose exec php bin/magento app:config:dump`) and copied `app/etc/config.php` to the host.
-
-- When building the php container I get the following error:
-
-```bash
-You cannot run this command because modules are not enabled. You can enable modules by running the 'module:enable --all' command.
-```
-
-_Answer:_ Put your `config.php` into `src/app/etc/`. If you run Magento 2 locally you can do that in the following way:
-
-```bash
-docker cp $(docker-compose ps -q php):/var/www/html/app/etc/config.php ./src/app/etc/config.php
-```
+_Answer:_ Make sure you have run `app:config:dump scopes themes` (example: `docker-compose exec php bin/magento app:config:dump scopes themes`).
 
 ## Todos
 

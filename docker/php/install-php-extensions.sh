@@ -27,6 +27,13 @@ REQUIRED_EXTENSIONS=$(grep -A 200 '"require"' "$COMPOSER_JSON" | \
     sed 's/.*"ext-\([^"]*\)".*/\1/' | \
     sort -u)
 
+# Add extensions required by dependencies but not explicitly listed in composer.json
+# These are commonly needed by Magento dependencies
+IMPLICIT_EXTENSIONS="sockets"
+REQUIRED_EXTENSIONS="$REQUIRED_EXTENSIONS
+$IMPLICIT_EXTENSIONS"
+REQUIRED_EXTENSIONS=$(echo "$REQUIRED_EXTENSIONS" | sort -u)
+
 echo "==> Found required extensions:"
 echo "$REQUIRED_EXTENSIONS" | sed 's/^/    - /'
 
