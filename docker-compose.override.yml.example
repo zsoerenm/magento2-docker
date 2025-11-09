@@ -32,6 +32,13 @@ services:
     profiles:
       - tools
 
+  securetermination:
+    volumes:
+      # Development: use Caddyfile.dev and mount local mkcert certificates
+      - ./docker/caddy/conf/Caddyfile.dev:/etc/caddy/Caddyfile:ro
+      - ${CADDY_CERT_FILE:-./certs/cert.pem}:/certs/cert.pem:ro
+      - ${CADDY_KEY_FILE:-./certs/key.pem}:/certs/key.pem:ro
+
   autoheal:
     profiles:
       - production  # Disabled in development

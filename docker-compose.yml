@@ -34,22 +34,24 @@ services:
       - smtp_password
     environment:
       - DB_HOST=db
-      - DB_USER=magento2
+      - DB_USER=${DB_USER}
+      - DB_NAME=${DB_NAME}
       - DB_PASSWORD_FILE=/run/secrets/db_password
+      - BACKEND_FRONTNAME=${BACKEND_FRONTNAME}
       - ADMIN_USER=admin
       - ADMIN_PASSWORD_FILE=/run/secrets/admin_password
       - ADMIN_EMAIL=${ADMIN_EMAIL}
-      - ADMIN_FIRSTNAME=John
-      - ADMIN_LASTNAME=Doe
+      - ADMIN_FIRSTNAME=${ADMIN_FIRSTNAME}
+      - ADMIN_LASTNAME=${ADMIN_LASTNAME}
       - CONFIG__DEFAULT__TRANS_EMAIL__IDENT_GENERAL__NAME=${TRANS_EMAIL_NAME}
       - CONFIG__DEFAULT__TRANS_EMAIL__IDENT_GENERAL__EMAIL=${TRANS_EMAIL_ADDRESS}
-      - CONFIG__DEFAULT__SYSTEM__SMTP__TRANSPORT=smtp # sendmail, smtp
+      - CONFIG__DEFAULT__SYSTEM__SMTP__TRANSPORT=${SMTP_TRANSPORT}
       - CONFIG__DEFAULT__SYSTEM__SMTP__HOST=${SMTP_HOST}
       - CONFIG__DEFAULT__SYSTEM__SMTP__PORT=${SMTP_PORT}
       - CONFIG__DEFAULT__SYSTEM__SMTP__USERNAME=${SMTP_USERNAME}
       - CONFIG__DEFAULT__SYSTEM__SMTP__PASSWORD_UNENCRYPTED_FILE=/run/secrets/smtp_password
-      - CONFIG__DEFAULT__SYSTEM__SMTP__AUTH=login # none, plain, login
-      - CONFIG__DEFAULT__SYSTEM__SMTP__SSL=tls # ssl, tls
+      - CONFIG__DEFAULT__SYSTEM__SMTP__AUTH=${SMTP_AUTH}
+      - CONFIG__DEFAULT__SYSTEM__SMTP__SSL=${SMTP_SSL}
       # Set caching application to Varnish (=2) default is 1
       - CONFIG__DEFAULT__SYSTEM__FULL_PAGE_CACHE__CACHING_APPLICATION=2
       - CONFIG__DEFAULT__WEB__SECURE__USE_IN_ADMINHTML=1
@@ -59,13 +61,13 @@ services:
       # add a /etc/hosts entry like
       # 127.0.0.1   magento.local
       - CONFIG__DEFAULT__WEB__SECURE__ENABLE_HSTS=1
-      - CONFIG__DEFAULT__WEB__UNSECURE__BASE_URL=/
-      - CONFIG__DEFAULT__WEB__SECURE__BASE_URL=/
+      - CONFIG__DEFAULT__WEB__UNSECURE__BASE_URL=http://magento.local
+      - CONFIG__DEFAULT__WEB__SECURE__BASE_URL=https://magento.local
       - SEARCH_ENGINE=opensearch
       - OPENSEARCH_HOST=opensearch
       - OPENSEARCH_ENABLE_AUTH=true
       - OPENSEARCH_USERNAME=admin
-      - OPENSEARCH_PASSWORD=Very5tr0ngPassw0rd
+      - OPENSEARCH_PASSWORD=${OPENSEARCH_PASSWORD}
       # Change these values to valkey in 2.4.9
       # see https://experienceleague.adobe.com/en/docs/commerce-operations/configuration-guide/cache/valkey/valkey-pg-cache#
       - CACHE_BACKEND=redis
@@ -104,8 +106,8 @@ services:
       - mysql_password
     environment:
       - MYSQL_ROOT_PASSWORD_FILE=/run/secrets/mysql_root_password
-      - MYSQL_DATABASE=magento2
-      - MYSQL_USER=magento2
+      - MYSQL_DATABASE=${DB_NAME}
+      - MYSQL_USER=${DB_USER}
       - MYSQL_PASSWORD_FILE=/run/secrets/mysql_password
 
   # Eventually make this a cluster.
@@ -117,7 +119,7 @@ services:
       - discovery.type=single-node
       - bootstrap.memory_lock=true
       - "OPENSEARCH_JAVA_OPTS=-Xms512m -Xmx512m"
-      - OPENSEARCH_INITIAL_ADMIN_PASSWORD=Very5tr0ngPassw0rd!
+      - OPENSEARCH_INITIAL_ADMIN_PASSWORD=${OPENSEARCH_PASSWORD}
       - DISABLE_INSTALL_DEMO_CONFIG=true
       - DISABLE_SECURITY_PLUGIN=true
     ulimits:
@@ -192,10 +194,12 @@ services:
       interval: 10s
       timeout: 10s
       retries: 3
+    environment:
+      - CADDY_EMAIL=${CADDY_EMAIL:-}
+      - DOMAIN=${DOMAIN:-localhost}
     volumes:
-      - ./certs/cert.pem:/certs/cert.pem:ro
-      - ./certs/key.pem:/certs/key.pem:ro
-      - ./docker/caddy/conf:/etc/caddy
+      - ./docker/caddy/conf:/etc/caddy:ro
+      # Production: Let's Encrypt stores certificates here
       - caddy_data:/data
       - caddy_config:/config
       - "${DOCKER_MAGENTO_VOLUME:-mediadata:/var/www/html/pub/media:ro}"

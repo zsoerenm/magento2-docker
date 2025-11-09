@@ -17,7 +17,14 @@ setVersion()
     possible_versions=`getValues $document_package_name`
     version=`echo "$possible_versions" | sed "$magento_version_line_number!d" | cut -d, -f1`
 
-    renovate_line_number=$((`cat renovate.json | grep -n $renovate_package_name | cut -d : -f 1` + 1))
+    match_line=`cat renovate.json | grep -n "\"matchPackageNames\": \[\"$renovate_package_name\"\]" | cut -d : -f 1`
+
+    if [ -z "$match_line" ]; then
+        echo "Warning: Could not find package rule for '$renovate_package_name' in renovate.json"
+        return 1
+    fi
+
+    renovate_line_number=$(($match_line + 1))
 
     sed -i "${renovate_line_number}s/.*/      \"allowedVersions\": \"<=$version\"/" renovate.json
 }
