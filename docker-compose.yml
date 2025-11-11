@@ -90,7 +90,7 @@ services:
       retries: 3
 
   db:
-    image: mariadb:10.6.21
+    image: mariadb:11.4.9
     restart: "${DOCKER_RESTART_POLICY:-unless-stopped}"
     volumes:
       - dbdata:/var/lib/mysql
