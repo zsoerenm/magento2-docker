@@ -23,6 +23,6 @@ jobs:
           sh update-dependency-version.sh
           rm xidel_0.9.8-1_amd64.deb
 
-      - uses: stefanzweifel/git-auto-commit-action@v5
+      - uses: stefanzweifel/git-auto-commit-action@v7
         with:
           commit_message: Update external dependencies
