@@ -113,7 +113,7 @@ services:
   # Eventually make this a cluster.
   # See https://opensearch.org/docs/latest/install-and-configure/install-opensearch/docker/
   opensearch:
-    image: opensearchproject/opensearch:3.3.2
+    image: opensearchproject/opensearch:3.4.0
     restart: "${DOCKER_RESTART_POLICY:-unless-stopped}"
     environment:
       - discovery.type=single-node
