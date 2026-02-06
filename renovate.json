@@ -52,7 +52,7 @@
     },
     {
       "matchPackageNames": ["composer"],
-      "allowedVersions": "<=2.8"
+      "allowedVersions": "<=2.9.3+"
     }
   ]
 }
