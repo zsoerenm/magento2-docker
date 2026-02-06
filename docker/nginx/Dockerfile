@@ -1,4 +1,4 @@
-FROM nginxinc/nginx-unprivileged:1.28.0-alpine AS magento2-nginx
+FROM nginxinc/nginx-unprivileged:1.29.5-alpine AS magento2-nginx
 
 COPY docker/nginx/conf/default.conf.template /etc/nginx/templates/
 
