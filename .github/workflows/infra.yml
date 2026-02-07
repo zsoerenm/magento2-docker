@@ -2,7 +2,7 @@ name: Infrastructure
 
 on:
   push:
-    branches: [main]
+    branches: [master]
     paths:
       - "infra/**"
       - ".github/workflows/infra.yml"
