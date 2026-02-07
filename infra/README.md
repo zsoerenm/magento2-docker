@@ -64,8 +64,9 @@ These are written to `.env` and `docker/secrets/` on each server automatically b
 | `MYSQL_ROOT_PASSWORD` | MySQL root password |
 | `OPENSEARCH_PASSWORD` | OpenSearch admin password |
 | `CADDY_EMAIL` | Email for Let's Encrypt |
-| `STAGING_DOMAIN` | Staging domain (e.g. `staging.example.com`) |
-| `PRODUCTION_DOMAIN` | Production domain (e.g. `shop.example.com`) |
+
+
+Domains are read from `infra/servers.yaml` — no need to duplicate them as secrets.
 
 ### 3. Configure Servers
 

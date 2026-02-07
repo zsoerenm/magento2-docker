@@ -20,6 +20,17 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
+      - name: Read domain from servers.yaml
+        id: config
+        run: |
+          DOMAIN=$(python3 -c "
+          import yaml
+          with open('infra/servers.yaml') as f:
+              data = yaml.safe_load(f)
+          print(data['servers']['staging']['domain'])
+          ")
+          echo "domain=$DOMAIN" >> "$GITHUB_OUTPUT"
+
       - name: Write environment and secrets
         env:
           BACKEND_FRONTNAME: ${{ secrets.BACKEND_FRONTNAME }}
@@ -42,7 +53,7 @@ jobs:
           SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
           OPENSEARCH_PASSWORD: ${{ secrets.OPENSEARCH_PASSWORD }}
           CADDY_EMAIL: ${{ secrets.CADDY_EMAIL }}
-          DOMAIN: ${{ secrets.STAGING_DOMAIN }}
+          DOMAIN: ${{ steps.config.outputs.domain }}
         run: ./infra/setup-env.sh
 
       - name: Sync repo to deploy directory

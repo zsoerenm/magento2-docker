@@ -15,6 +15,17 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
+      - name: Read domain from servers.yaml
+        id: config
+        run: |
+          DOMAIN=$(python3 -c "
+          import yaml
+          with open('infra/servers.yaml') as f:
+              data = yaml.safe_load(f)
+          print(data['servers']['production']['domain'])
+          ")
+          echo "domain=$DOMAIN" >> "$GITHUB_OUTPUT"
+
       - name: Write environment and secrets locally (for build)
         env:
           BACKEND_FRONTNAME: ${{ secrets.BACKEND_FRONTNAME }}
@@ -37,7 +48,7 @@ jobs:
           SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
           OPENSEARCH_PASSWORD: ${{ secrets.OPENSEARCH_PASSWORD }}
           CADDY_EMAIL: ${{ secrets.CADDY_EMAIL }}
-          DOMAIN: ${{ secrets.PRODUCTION_DOMAIN }}
+          DOMAIN: ${{ steps.config.outputs.domain }}
         run: ./infra/setup-env.sh
 
       - name: Sync repo and build
@@ -107,7 +118,7 @@ jobs:
             export SMTP_PASSWORD="${{ secrets.SMTP_PASSWORD }}"
             export OPENSEARCH_PASSWORD="${{ secrets.OPENSEARCH_PASSWORD }}"
             export CADDY_EMAIL="${{ secrets.CADDY_EMAIL }}"
-            export DOMAIN="${{ secrets.PRODUCTION_DOMAIN }}"
+            export DOMAIN="${{ steps.config.outputs.domain }}"
             /opt/magento2/infra/setup-env.sh
 SETUP
 
@@ -135,7 +146,7 @@ DEPLOY
 
       - name: Verify production
         env:
-          PROD_DOMAIN: ${{ secrets.PRODUCTION_DOMAIN }}
+          PROD_DOMAIN: ${{ steps.config.outputs.domain }}
         run: |
           HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "https://$PROD_DOMAIN" --max-time 30 || echo "000")
           if [ "$HTTP_CODE" = "200" ] || [ "$HTTP_CODE" = "302" ]; then
