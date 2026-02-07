@@ -9,62 +9,73 @@ jobs:
   deploy:
     runs-on: [self-hosted, staging]
     environment: production  # Requires approval if configured
+    env:
+      DEPLOY_DIR: /opt/magento2
     steps:
       - name: Checkout
         uses: actions/checkout@v6
 
-      - name: Load environment
-        run: |
-          DEPLOY_DIR="/opt/magento2"
-          if [ -f "$DEPLOY_DIR/.env" ]; then
-            set -a
-            source "$DEPLOY_DIR/.env"
-            set +a
-          fi
+      - name: Write environment and secrets locally (for build)
+        env:
+          BACKEND_FRONTNAME: ${{ secrets.BACKEND_FRONTNAME }}
+          ADMIN_EMAIL: ${{ secrets.ADMIN_EMAIL }}
+          ADMIN_FIRSTNAME: ${{ secrets.ADMIN_FIRSTNAME }}
+          ADMIN_LASTNAME: ${{ secrets.ADMIN_LASTNAME }}
+          TRANS_EMAIL_NAME: ${{ secrets.TRANS_EMAIL_NAME }}
+          TRANS_EMAIL_ADDRESS: ${{ secrets.TRANS_EMAIL_ADDRESS }}
+          SMTP_TRANSPORT: ${{ secrets.SMTP_TRANSPORT }}
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT }}
+          SMTP_USERNAME: ${{ secrets.SMTP_USERNAME }}
+          SMTP_AUTH: ${{ secrets.SMTP_AUTH }}
+          SMTP_SSL: ${{ secrets.SMTP_SSL }}
+          DB_USER: ${{ secrets.DB_USER }}
+          DB_NAME: ${{ secrets.DB_NAME }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_ROOT_PASSWORD }}
+          ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
+          SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+          OPENSEARCH_PASSWORD: ${{ secrets.OPENSEARCH_PASSWORD }}
+          CADDY_EMAIL: ${{ secrets.CADDY_EMAIL }}
+          DOMAIN: ${{ secrets.PRODUCTION_DOMAIN }}
+        run: ./infra/setup-env.sh
 
-      - name: Build Docker images
+      - name: Sync repo and build
         working-directory: /opt/magento2
         run: |
-          # Sync repo files
           rsync -a --delete \
             --exclude='.git' \
             --exclude='.env' \
             --exclude='docker/secrets' \
-            "$GITHUB_WORKSPACE/" /opt/magento2/
+            "$GITHUB_WORKSPACE/" "$DEPLOY_DIR/"
 
-          # Build images (should be cached from staging deploy)
+          set -a && source .env && set +a
           docker compose build
 
-      - name: Push images to production
+      - name: Transfer images to production
         env:
           PROD_HOST: ${{ secrets.PRODUCTION_HOST }}
           PROD_SSH_KEY: ${{ secrets.DEPLOY_SSH_PRIVATE_KEY }}
         run: |
-          # Setup SSH
           mkdir -p ~/.ssh
           echo "$PROD_SSH_KEY" > ~/.ssh/prod_key
           chmod 600 ~/.ssh/prod_key
           ssh-keyscan -H "$PROD_HOST" >> ~/.ssh/known_hosts 2>/dev/null
 
-          # Get image names from docker-compose.yml
-          IMAGES=$(docker compose config --images | sort -u)
-
+          IMAGES=$(cd "$DEPLOY_DIR" && set -a && source .env && set +a && docker compose config --images | sort -u)
           echo "Transferring images to production..."
           docker save $IMAGES | ssh -i ~/.ssh/prod_key -o StrictHostKeyChecking=no deploy@"$PROD_HOST" "docker load"
-
-          echo "Images transferred successfully."
-          rm -f ~/.ssh/prod_key
+          echo "Images transferred."
 
       - name: Deploy on production
         env:
           PROD_HOST: ${{ secrets.PRODUCTION_HOST }}
           PROD_SSH_KEY: ${{ secrets.DEPLOY_SSH_PRIVATE_KEY }}
         run: |
-          mkdir -p ~/.ssh
           echo "$PROD_SSH_KEY" > ~/.ssh/prod_key
           chmod 600 ~/.ssh/prod_key
 
-          # Sync docker-compose and config files (not .env or secrets)
+          # Sync repo files
           rsync -a --delete \
             --exclude='.git' \
             --exclude='.env' \
@@ -72,15 +83,40 @@ jobs:
             -e "ssh -i ~/.ssh/prod_key -o StrictHostKeyChecking=no" \
             "$GITHUB_WORKSPACE/" deploy@"$PROD_HOST":/opt/magento2/
 
+          # Write .env and secrets on production
+          # We pipe the setup-env.sh script with env vars over SSH
+          ssh -i ~/.ssh/prod_key -o StrictHostKeyChecking=no deploy@"$PROD_HOST" bash <<'SETUP'
+            export DEPLOY_DIR=/opt/magento2
+            export BACKEND_FRONTNAME="${{ secrets.BACKEND_FRONTNAME }}"
+            export ADMIN_EMAIL="${{ secrets.ADMIN_EMAIL }}"
+            export ADMIN_FIRSTNAME="${{ secrets.ADMIN_FIRSTNAME }}"
+            export ADMIN_LASTNAME="${{ secrets.ADMIN_LASTNAME }}"
+            export TRANS_EMAIL_NAME="${{ secrets.TRANS_EMAIL_NAME }}"
+            export TRANS_EMAIL_ADDRESS="${{ secrets.TRANS_EMAIL_ADDRESS }}"
+            export SMTP_TRANSPORT="${{ secrets.SMTP_TRANSPORT }}"
+            export SMTP_HOST="${{ secrets.SMTP_HOST }}"
+            export SMTP_PORT="${{ secrets.SMTP_PORT }}"
+            export SMTP_USERNAME="${{ secrets.SMTP_USERNAME }}"
+            export SMTP_AUTH="${{ secrets.SMTP_AUTH }}"
+            export SMTP_SSL="${{ secrets.SMTP_SSL }}"
+            export DB_USER="${{ secrets.DB_USER }}"
+            export DB_NAME="${{ secrets.DB_NAME }}"
+            export DB_PASSWORD="${{ secrets.DB_PASSWORD }}"
+            export MYSQL_ROOT_PASSWORD="${{ secrets.MYSQL_ROOT_PASSWORD }}"
+            export ADMIN_PASSWORD="${{ secrets.ADMIN_PASSWORD }}"
+            export SMTP_PASSWORD="${{ secrets.SMTP_PASSWORD }}"
+            export OPENSEARCH_PASSWORD="${{ secrets.OPENSEARCH_PASSWORD }}"
+            export CADDY_EMAIL="${{ secrets.CADDY_EMAIL }}"
+            export DOMAIN="${{ secrets.PRODUCTION_DOMAIN }}"
+            /opt/magento2/infra/setup-env.sh
+SETUP
+
           # Deploy
-          ssh -i ~/.ssh/prod_key -o StrictHostKeyChecking=no deploy@"$PROD_HOST" bash <<'EOF'
+          ssh -i ~/.ssh/prod_key -o StrictHostKeyChecking=no deploy@"$PROD_HOST" bash <<'DEPLOY'
             cd /opt/magento2
             set -a && source .env && set +a
-
-            # Rolling update
             docker compose up -d
 
-            # Wait for health
             echo "Waiting for services..."
             for i in $(seq 1 90); do
               if docker compose ps | grep -q "unhealthy"; then
@@ -91,24 +127,19 @@ jobs:
                 exit 0
               fi
             done
-
             echo "WARNING: Some services may not be healthy yet"
             docker compose ps
-EOF
+DEPLOY
 
           rm -f ~/.ssh/prod_key
 
       - name: Verify production
         env:
-          PROD_HOST: ${{ secrets.PRODUCTION_HOST }}
-          PROD_SSH_KEY: ${{ secrets.DEPLOY_SSH_PRIVATE_KEY }}
+          PROD_DOMAIN: ${{ secrets.PRODUCTION_DOMAIN }}
         run: |
-          # Quick smoke test
-          DOMAIN=$(grep '^DOMAIN=' /opt/magento2/.env 2>/dev/null | cut -d= -f2 || echo "$PROD_HOST")
-          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "https://$DOMAIN" --max-time 30 || echo "000")
-
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "https://$PROD_DOMAIN" --max-time 30 || echo "000")
           if [ "$HTTP_CODE" = "200" ] || [ "$HTTP_CODE" = "302" ]; then
-            echo "✅ Production is responding (HTTP $HTTP_CODE)"
+            echo "✅ Production responding (HTTP $HTTP_CODE)"
           else
-            echo "⚠️  Production returned HTTP $HTTP_CODE — please verify manually"
+            echo "⚠️ Production returned HTTP $HTTP_CODE"
           fi
