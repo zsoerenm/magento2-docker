@@ -1,0 +1,67 @@
+name: Infrastructure
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "infra/**"
+      - ".github/workflows/infra.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: write
+
+env:
+  HCLOUD_TOKEN: ${{ secrets.HCLOUD_TOKEN }}
+  HETZNER_DNS_TOKEN: ${{ secrets.HETZNER_DNS_TOKEN }}
+
+jobs:
+  provision:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Install hcloud CLI
+        run: |
+          curl -sL https://github.com/hetznercloud/cli/releases/latest/download/hcloud-linux-amd64.tar.gz | tar xz
+          sudo mv hcloud /usr/local/bin/
+
+      - name: Generate SSH key pair
+        run: |
+          ssh-keygen -t ed25519 -f /tmp/deploy_key -N "" -C "magento2-deploy"
+          echo "DEPLOY_SSH_PUBKEY=$(cat /tmp/deploy_key.pub)" >> $GITHUB_ENV
+          echo "DEPLOY_SSH_PRIVKEY_PATH=/tmp/deploy_key" >> $GITHUB_ENV
+
+      - name: Load existing SSH key from secrets
+        if: ${{ secrets.DEPLOY_SSH_PRIVATE_KEY != '' }}
+        run: |
+          echo "${{ secrets.DEPLOY_SSH_PRIVATE_KEY }}" > /tmp/deploy_key
+          chmod 600 /tmp/deploy_key
+          ssh-keygen -y -f /tmp/deploy_key > /tmp/deploy_key.pub
+          echo "DEPLOY_SSH_PUBKEY=$(cat /tmp/deploy_key.pub)" >> $GITHUB_ENV
+
+      - name: Get GitHub Actions runner registration token
+        id: runner-token
+        run: |
+          TOKEN=$(curl -s -X POST \
+            -H "Authorization: token ${{ secrets.GH_PAT }}" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${{ github.repository }}/actions/runners/registration-token" \
+            | jq -r '.token')
+          echo "GITHUB_RUNNER_TOKEN=$TOKEN" >> $GITHUB_ENV
+        continue-on-error: true
+
+      - name: Provision infrastructure
+        run: ./infra/provision.sh
+
+      - name: Save SSH key as artifact (first run only)
+        if: ${{ secrets.DEPLOY_SSH_PRIVATE_KEY == '' }}
+        run: |
+          echo "::warning::New SSH key generated. Add the private key below as DEPLOY_SSH_PRIVATE_KEY secret:"
+          echo "--- Private key (add as GitHub secret) ---"
+          cat /tmp/deploy_key
+          echo "---"
+          echo ""
+          echo "::warning::On subsequent runs, the key from secrets will be used."

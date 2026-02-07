@@ -1,0 +1,61 @@
+name: Deploy to Staging
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - "infra/**"
+      - "*.md"
+      - "docs/**"
+      - ".github/workflows/infra.yml"
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: [self-hosted, staging]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Load environment
+        run: |
+          # Source .env from server's deploy directory
+          DEPLOY_DIR="/opt/magento2"
+          if [ -f "$DEPLOY_DIR/.env" ]; then
+            set -a
+            source "$DEPLOY_DIR/.env"
+            set +a
+          fi
+
+      - name: Build Docker images
+        working-directory: /opt/magento2
+        run: |
+          # Sync repo to deploy directory
+          rsync -a --delete \
+            --exclude='.git' \
+            --exclude='.env' \
+            --exclude='docker/secrets' \
+            "$GITHUB_WORKSPACE/" /opt/magento2/
+
+          # Build images (cached from previous builds)
+          docker compose build
+
+      - name: Deploy
+        working-directory: /opt/magento2
+        run: |
+          docker compose up -d
+
+          # Wait for health checks
+          echo "Waiting for services to become healthy..."
+          for i in $(seq 1 60); do
+            if docker compose ps | grep -q "unhealthy"; then
+              sleep 5
+            else
+              echo "All services healthy!"
+              docker compose ps
+              exit 0
+            fi
+          done
+
+          echo "WARNING: Some services may not be healthy yet"
+          docker compose ps

@@ -1,0 +1,114 @@
+name: Deploy to Production
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: [self-hosted, staging]
+    environment: production  # Requires approval if configured
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Load environment
+        run: |
+          DEPLOY_DIR="/opt/magento2"
+          if [ -f "$DEPLOY_DIR/.env" ]; then
+            set -a
+            source "$DEPLOY_DIR/.env"
+            set +a
+          fi
+
+      - name: Build Docker images
+        working-directory: /opt/magento2
+        run: |
+          # Sync repo files
+          rsync -a --delete \
+            --exclude='.git' \
+            --exclude='.env' \
+            --exclude='docker/secrets' \
+            "$GITHUB_WORKSPACE/" /opt/magento2/
+
+          # Build images (should be cached from staging deploy)
+          docker compose build
+
+      - name: Push images to production
+        env:
+          PROD_HOST: ${{ secrets.PRODUCTION_HOST }}
+          PROD_SSH_KEY: ${{ secrets.DEPLOY_SSH_PRIVATE_KEY }}
+        run: |
+          # Setup SSH
+          mkdir -p ~/.ssh
+          echo "$PROD_SSH_KEY" > ~/.ssh/prod_key
+          chmod 600 ~/.ssh/prod_key
+          ssh-keyscan -H "$PROD_HOST" >> ~/.ssh/known_hosts 2>/dev/null
+
+          # Get image names from docker-compose.yml
+          IMAGES=$(docker compose config --images | sort -u)
+
+          echo "Transferring images to production..."
+          docker save $IMAGES | ssh -i ~/.ssh/prod_key -o StrictHostKeyChecking=no deploy@"$PROD_HOST" "docker load"
+
+          echo "Images transferred successfully."
+          rm -f ~/.ssh/prod_key
+
+      - name: Deploy on production
+        env:
+          PROD_HOST: ${{ secrets.PRODUCTION_HOST }}
+          PROD_SSH_KEY: ${{ secrets.DEPLOY_SSH_PRIVATE_KEY }}
+        run: |
+          mkdir -p ~/.ssh
+          echo "$PROD_SSH_KEY" > ~/.ssh/prod_key
+          chmod 600 ~/.ssh/prod_key
+
+          # Sync docker-compose and config files (not .env or secrets)
+          rsync -a --delete \
+            --exclude='.git' \
+            --exclude='.env' \
+            --exclude='docker/secrets' \
+            -e "ssh -i ~/.ssh/prod_key -o StrictHostKeyChecking=no" \
+            "$GITHUB_WORKSPACE/" deploy@"$PROD_HOST":/opt/magento2/
+
+          # Deploy
+          ssh -i ~/.ssh/prod_key -o StrictHostKeyChecking=no deploy@"$PROD_HOST" bash <<'EOF'
+            cd /opt/magento2
+            set -a && source .env && set +a
+
+            # Rolling update
+            docker compose up -d
+
+            # Wait for health
+            echo "Waiting for services..."
+            for i in $(seq 1 90); do
+              if docker compose ps | grep -q "unhealthy"; then
+                sleep 5
+              else
+                echo "All services healthy!"
+                docker compose ps
+                exit 0
+              fi
+            done
+
+            echo "WARNING: Some services may not be healthy yet"
+            docker compose ps
+EOF
+
+          rm -f ~/.ssh/prod_key
+
+      - name: Verify production
+        env:
+          PROD_HOST: ${{ secrets.PRODUCTION_HOST }}
+          PROD_SSH_KEY: ${{ secrets.DEPLOY_SSH_PRIVATE_KEY }}
+        run: |
+          # Quick smoke test
+          DOMAIN=$(grep '^DOMAIN=' /opt/magento2/.env 2>/dev/null | cut -d= -f2 || echo "$PROD_HOST")
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "https://$DOMAIN" --max-time 30 || echo "000")
+
+          if [ "$HTTP_CODE" = "200" ] || [ "$HTTP_CODE" = "302" ]; then
+            echo "✅ Production is responding (HTTP $HTTP_CODE)"
+          else
+            echo "⚠️  Production returned HTTP $HTTP_CODE — please verify manually"
+          fi
