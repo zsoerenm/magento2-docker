@@ -38,11 +38,40 @@ Add these secrets to your repository:
 | `GH_PAT` | GitHub PAT with `repo` + `admin:org` for runner registration | Optional |
 | `PRODUCTION_HOST` | Production server IP (set after first infra run) | After setup |
 
-### 2. Configure Servers
+### 2. GitHub Secrets for Magento Environment
+
+These are written to `.env` and `docker/secrets/` on each server automatically by the deploy workflows.
+
+| Secret | Description |
+|--------|-------------|
+| `BACKEND_FRONTNAME` | Admin URL path (e.g. `admin_xyz`) |
+| `ADMIN_EMAIL` | Admin email |
+| `ADMIN_FIRSTNAME` | Admin first name |
+| `ADMIN_LASTNAME` | Admin last name |
+| `ADMIN_PASSWORD` | Admin password |
+| `TRANS_EMAIL_NAME` | Store transactional email name |
+| `TRANS_EMAIL_ADDRESS` | Store transactional email address |
+| `SMTP_TRANSPORT` | SMTP transport (e.g. `smtp`) |
+| `SMTP_HOST` | SMTP server host |
+| `SMTP_PORT` | SMTP port (e.g. `587`) |
+| `SMTP_USERNAME` | SMTP username |
+| `SMTP_PASSWORD` | SMTP password |
+| `SMTP_AUTH` | SMTP auth type (`login`, `plain`, `none`) |
+| `SMTP_SSL` | SMTP encryption (`tls`, `ssl`) |
+| `DB_USER` | Database user |
+| `DB_NAME` | Database name |
+| `DB_PASSWORD` | Database password |
+| `MYSQL_ROOT_PASSWORD` | MySQL root password |
+| `OPENSEARCH_PASSWORD` | OpenSearch admin password |
+| `CADDY_EMAIL` | Email for Let's Encrypt |
+| `STAGING_DOMAIN` | Staging domain (e.g. `staging.example.com`) |
+| `PRODUCTION_DOMAIN` | Production domain (e.g. `shop.example.com`) |
+
+### 3. Configure Servers
 
 Edit `servers.yaml` to set your desired server types, locations, and domains.
 
-### 3. Run Infrastructure Workflow
+### 4. Run Infrastructure Workflow
 
 Either push changes to `infra/` or manually trigger the "Infrastructure" workflow.
 
@@ -53,15 +82,7 @@ On first run:
 4. Sets up GitHub Actions runner on staging
 5. Configures DNS records
 
-### 4. Configure Server Environment
-
-SSH into each server and set up `.env` and secrets:
-
-```bash
-ssh root@<server-ip>
-mkdir -p /opt/magento2/docker/secrets
-# Create .env and secret files (see .env.example)
-```
+**No manual SSH required.** The deploy workflows automatically write `.env` and secrets from GitHub Secrets.
 
 ## Workflows
 
