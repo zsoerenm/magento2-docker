@@ -1,0 +1,28 @@
+# Infrastructure configuration for Hetzner Cloud
+# Changes to this file trigger the infra workflow to reconcile servers and DNS.
+
+# Hetzner Cloud settings
+hetzner:
+  # SSH key name (will be created/updated in Hetzner Cloud)
+  ssh_key_name: magento2-deploy
+
+# DNS configuration
+dns:
+  zone: example.com  # Change to your domain
+  # Records are auto-created per environment
+
+# Server environments
+servers:
+  staging:
+    server_type: cx22       # 2 vCPU, 4 GB RAM, 40 GB disk
+    location: fsn1          # Falkenstein, Germany
+    hostname: staging
+    domain: staging.example.com  # Change to your domain
+    github_runner: true     # Install self-hosted GitHub Actions runner
+
+  production:
+    server_type: cx22       # 2 vCPU, 4 GB RAM, 40 GB disk
+    location: fsn1
+    hostname: production
+    domain: shop.example.com     # Change to your domain
+    github_runner: false
