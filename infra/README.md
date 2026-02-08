@@ -124,11 +124,46 @@ On first run, it will:
 - No container registry needed
 - No GitHub Actions minutes for builds (self-hosted runner)
 
-## Extending (Private Repo)
+## Creating Your Private Shop (Fork)
 
-Your private repo can extend this setup:
+This repository provides the infrastructure and Docker setup. To build your own Magento shop on top of it, **fork this repo** into a private repository:
 
-1. Add this repo as a git submodule or reference
-2. Add `docker-compose.override.yml` with custom services/volumes
-3. Copy/extend the deploy workflows
-4. Server `.env` files contain your shop-specific configuration
+### 1. Fork
+
+On GitHub, click **Fork** on this repo. Make the fork **private** — it will contain your shop-specific code and configuration.
+
+### 2. Customize
+
+Add your shop-specific files to the fork. The public repo doesn't touch these paths, so upstream merges stay clean:
+
+```
+your-private-fork/
+├── infra/config.toml              # ← Edit: your real domains, server config, etc.
+├── src/
+│   ├── app/code/YourVendor/       # ← Your custom Magento modules
+│   ├── app/design/frontend/       # ← Your custom theme
+│   └── composer.json              # ← Add your dependencies
+├── docker-compose.override.yml    # ← Optional: extra services, dev volumes
+└── .github/workflows/             # ← Inherited from upstream, works as-is
+```
+
+### 3. Set up GitHub Secrets
+
+Follow the [Setup (One-Time)](#setup-one-time) steps above in your private fork.
+
+### 4. Syncing with upstream
+
+When the public repo gets updates (new Docker improvements, workflow fixes, dependency bumps), pull them into your fork:
+
+```bash
+# One-time: add the public repo as upstream remote
+git remote add upstream https://github.com/zsoerenm/magento2-docker.git
+
+# Fetch and merge upstream changes
+git fetch upstream
+git merge upstream/master
+```
+
+If there are merge conflicts, they'll typically be in files like `docker-compose.yml` or `Dockerfile`s. Resolve them, test on staging (push to `master`), then create a release to deploy to production.
+
+**Tip:** To stay informed about upstream changes, click **Watch** → **Releases only** on the public repo.
