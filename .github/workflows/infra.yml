@@ -41,6 +41,7 @@ jobs:
           chmod 600 /tmp/deploy_key
           ssh-keygen -y -f /tmp/deploy_key > /tmp/deploy_key.pub
           echo "DEPLOY_SSH_PUBKEY=$(cat /tmp/deploy_key.pub)" >> $GITHUB_ENV
+          touch /tmp/deploy_key_existed
 
       - name: Get GitHub Actions runner registration token
         id: runner-token
@@ -54,14 +55,60 @@ jobs:
         continue-on-error: true
 
       - name: Provision infrastructure
+        id: provision
         run: ./infra/provision.sh
 
-      - name: Save SSH key as artifact (first run only)
-        if: ${{ secrets.DEPLOY_SSH_PRIVATE_KEY == '' }}
+      - name: Save server IPs and SSH key as GitHub Secrets
+        env:
+          GH_PAT: ${{ secrets.GH_PAT }}
         run: |
-          echo "::warning::New SSH key generated. Add the private key below as DEPLOY_SSH_PRIVATE_KEY secret:"
-          echo "--- Private key (add as GitHub secret) ---"
-          cat /tmp/deploy_key
-          echo "---"
-          echo ""
-          echo "::warning::On subsequent runs, the key from secrets will be used."
+          set_secret() {
+            local name="$1" value="$2"
+            echo "Setting secret $name..."
+            curl -s -X GET \
+              -H "Authorization: token $GH_PAT" \
+              -H "Accept: application/vnd.github+json" \
+              "https://api.github.com/repos/${{ github.repository }}/actions/secrets/public-key" \
+              -o /tmp/pub_key.json
+
+            KEY_ID=$(jq -r '.key_id' /tmp/pub_key.json)
+            PUB_KEY=$(jq -r '.key' /tmp/pub_key.json)
+
+            # Encrypt the secret value using libsodium sealed box
+            ENCRYPTED=$(python3 -c "
+          from base64 import b64encode, b64decode
+          from nacl.public import SealedBox, PublicKey
+          public_key = b64decode('$PUB_KEY')
+          sealed_box = SealedBox(PublicKey(public_key))
+          encrypted = sealed_box.encrypt(b'''$value''')
+          print(b64encode(encrypted).decode())
+          ")
+
+            curl -s -X PUT \
+              -H "Authorization: token $GH_PAT" \
+              -H "Accept: application/vnd.github+json" \
+              "https://api.github.com/repos/${{ github.repository }}/actions/secrets/$name" \
+              -d "{\"encrypted_value\":\"$ENCRYPTED\",\"key_id\":\"$KEY_ID\"}"
+          }
+
+          pip install pynacl -q
+
+          # Save production host IP
+          PROD_IP=$(hcloud server ip magento2-production 2>/dev/null || echo "")
+          if [ -n "$PROD_IP" ]; then
+            set_secret "PRODUCTION_HOST" "$PROD_IP"
+            echo "✅ PRODUCTION_HOST set to $PROD_IP"
+          fi
+
+          # Save staging host IP
+          STAGING_IP=$(hcloud server ip magento2-staging 2>/dev/null || echo "")
+          if [ -n "$STAGING_IP" ]; then
+            set_secret "STAGING_HOST" "$STAGING_IP"
+            echo "✅ STAGING_HOST set to $STAGING_IP"
+          fi
+
+          # Save SSH key on first run
+          if [ ! -f /tmp/deploy_key_existed ]; then
+            set_secret "DEPLOY_SSH_PRIVATE_KEY" "$(cat /tmp/deploy_key)"
+            echo "✅ DEPLOY_SSH_PRIVATE_KEY saved"
+          fi
