@@ -26,75 +26,121 @@ This directory contains everything needed to provision and manage the Magento 2 
 
 ## Setup (One-Time)
 
-### 1. Create `GH_PAT` (Fine-Grained Token)
+All configuration is done through **GitHub repository secrets**. No manual SSH access is needed.
 
-Create a **fine-grained personal access token** at GitHub → Settings → Developer settings → Fine-grained tokens:
+To add secrets: go to your repository on GitHub → **Settings** → **Secrets and variables** → **Actions** → **New repository secret**.
 
-- **Repository access**: Only select `magento2-docker`
-- **Permissions**:
-  - **Actions**: Read & Write (runner registration)
-  - **Secrets**: Read & Write (auto-save server IPs & SSH key)
+---
 
-Save it as the `GH_PAT` repository secret.
+### Step 1: Create a GitHub Fine-Grained Token (`GH_PAT`)
 
-### 2. GitHub Secrets
+This token allows the infrastructure workflow to automatically save server IPs and SSH keys back as GitHub Secrets.
 
-Add these secrets to your repository:
+1. Go to [GitHub → Settings → Developer settings → Fine-grained personal access tokens](https://github.com/settings/personal-access-tokens/new)
+2. Set **Token name** to something like `magento2-deploy`
+3. Set **Expiration** as desired
+4. Under **Repository access**, select **"Only select repositories"** and choose `magento2-docker`
+5. Under **Permissions**, grant:
+   - **Actions**: Read & Write *(needed to register the self-hosted runner)*
+   - **Secrets**: Read & Write *(needed to auto-save server IPs and SSH key)*
+6. Click **Generate token** and copy it
+7. Add it as a repository secret named **`GH_PAT`**
 
-| Secret | Description | Required |
-|--------|-------------|----------|
-| `HCLOUD_TOKEN` | Hetzner Cloud API token | ✅ |
-| `HETZNER_DNS_TOKEN` | Hetzner DNS API token (for automatic DNS) | Optional |
-| `DEPLOY_SSH_PRIVATE_KEY` | SSH key for server access (auto-saved on first run) | Auto |
-| `PRODUCTION_HOST` | Production server IP (auto-saved by infra workflow) | Auto |
-| `STAGING_HOST` | Staging server IP (auto-saved by infra workflow) | Auto |
+---
 
-### 3. GitHub Secrets for Magento Environment
+### Step 2: Hetzner Cloud Token (`HCLOUD_TOKEN`)
 
-These are written to `.env` and `docker/secrets/` on each server automatically by the deploy workflows.
+This token lets the workflow create and manage your VPS instances.
 
-| Secret | Description |
-|--------|-------------|
-| `BACKEND_FRONTNAME` | Admin URL path (e.g. `admin_xyz`) |
-| `ADMIN_EMAIL` | Admin email |
-| `ADMIN_FIRSTNAME` | Admin first name |
-| `ADMIN_LASTNAME` | Admin last name |
-| `ADMIN_PASSWORD` | Admin password |
-| `TRANS_EMAIL_NAME` | Store transactional email name |
-| `TRANS_EMAIL_ADDRESS` | Store transactional email address |
-| `SMTP_TRANSPORT` | SMTP transport (e.g. `smtp`) |
-| `SMTP_HOST` | SMTP server host |
-| `SMTP_PORT` | SMTP port (e.g. `587`) |
-| `SMTP_USERNAME` | SMTP username |
-| `SMTP_PASSWORD` | SMTP password |
-| `SMTP_AUTH` | SMTP auth type (`login`, `plain`, `none`) |
-| `SMTP_SSL` | SMTP encryption (`tls`, `ssl`) |
-| `DB_USER` | Database user |
-| `DB_NAME` | Database name |
-| `DB_PASSWORD` | Database password |
-| `MYSQL_ROOT_PASSWORD` | MySQL root password |
-| `OPENSEARCH_PASSWORD` | OpenSearch admin password |
-| `CADDY_EMAIL` | Email for Let's Encrypt |
+1. Go to [Hetzner Cloud Console](https://console.hetzner.cloud/)
+2. Select your project (or create one)
+3. Go to **Security** → **API Tokens** → **Generate API Token**
+4. Set permissions to **Read & Write**
+5. Copy the token and add it as a repository secret named **`HCLOUD_TOKEN`**
 
+---
 
-Domains are read from `infra/servers.yaml` — no need to duplicate them as secrets.
+### Step 3 (Optional): Hetzner DNS Token (`HETZNER_DNS_TOKEN`)
 
-### 4. Configure Servers
+If you want automatic DNS record management (recommended):
 
-Edit `servers.yaml` to set your desired server types, locations, and domains.
+1. Go to [Hetzner DNS Console](https://dns.hetzner.com/) → **API Tokens**
+2. Create a new token
+3. Add it as a repository secret named **`HETZNER_DNS_TOKEN`**
 
-### 5. Run Infrastructure Workflow
+If you skip this, you'll need to manually point your domains to the server IPs.
 
-Either push changes to `infra/` or manually trigger the "Infrastructure" workflow.
+---
 
-On first run:
-1. Creates Hetzner VPS instances
-2. Installs NixOS via nixos-infect
-3. Configures Docker, firewall, SSH
-4. Sets up GitHub Actions runner on staging
-5. Configures DNS records
+### Step 4: Magento Environment Secrets
 
-**No manual SSH required.** The deploy workflows automatically write `.env` and secrets from GitHub Secrets.
+These configure your Magento shop. They are written to `.env` and `docker/secrets/` on each server automatically during deployment.
+
+Add each of the following as a repository secret:
+
+**Admin configuration:**
+
+| Secret | Description | Example |
+|--------|-------------|---------|
+| `BACKEND_FRONTNAME` | Admin URL path (keep secret for security) | `admin_x7k9m` |
+| `ADMIN_EMAIL` | Admin account email | `admin@example.com` |
+| `ADMIN_FIRSTNAME` | Admin first name | `John` |
+| `ADMIN_LASTNAME` | Admin last name | `Doe` |
+| `ADMIN_PASSWORD` | Admin password (must contain letters + numbers) | `MySecurePass123` |
+
+**Email / SMTP:**
+
+| Secret | Description | Example |
+|--------|-------------|---------|
+| `TRANS_EMAIL_NAME` | Store name for transactional emails | `My Store` |
+| `TRANS_EMAIL_ADDRESS` | From address for transactional emails | `shop@example.com` |
+| `SMTP_TRANSPORT` | Transport protocol | `smtp` |
+| `SMTP_HOST` | SMTP server hostname | `mail.example.com` |
+| `SMTP_PORT` | SMTP port | `587` |
+| `SMTP_USERNAME` | SMTP username | `shop@example.com` |
+| `SMTP_PASSWORD` | SMTP password | *(your password)* |
+| `SMTP_AUTH` | Authentication method | `login` |
+| `SMTP_SSL` | Encryption method | `tls` |
+
+**Database:**
+
+| Secret | Description | Example |
+|--------|-------------|---------|
+| `DB_USER` | MariaDB user | `magento2` |
+| `DB_NAME` | MariaDB database name | `magento2` |
+| `DB_PASSWORD` | MariaDB user password | *(strong password)* |
+| `MYSQL_ROOT_PASSWORD` | MariaDB root password | *(strong password)* |
+
+**Other:**
+
+| Secret | Description | Example |
+|--------|-------------|---------|
+| `OPENSEARCH_PASSWORD` | OpenSearch admin password | *(strong password)* |
+| `CADDY_EMAIL` | Email for Let's Encrypt certificates | `admin@example.com` |
+
+> **Note:** Domains are read from `infra/servers.yaml` — no need to add them as secrets.
+
+---
+
+### Step 5: Configure Servers
+
+Edit `infra/servers.yaml` to set your desired server types, locations, and domains. Commit and push to `master`.
+
+---
+
+### Step 6: Run Infrastructure Workflow
+
+The infrastructure workflow runs automatically when you push changes to `infra/`. You can also trigger it manually: **Actions** → **Infrastructure** → **Run workflow**.
+
+On first run, it will:
+1. ✅ Create 2 Hetzner VPS instances (staging + production)
+2. ✅ Install NixOS on both servers
+3. ✅ Configure Docker, firewall, SSH hardening, swap
+4. ✅ Set up a self-hosted GitHub Actions runner on staging
+5. ✅ Configure DNS records (if `HETZNER_DNS_TOKEN` is set)
+6. ✅ Auto-save `DEPLOY_SSH_PRIVATE_KEY`, `STAGING_HOST`, and `PRODUCTION_HOST` as GitHub Secrets
+
+**No manual SSH required.** Everything is fully automated from this point on.
 
 ## Workflows
 
