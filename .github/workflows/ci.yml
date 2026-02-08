@@ -153,8 +153,10 @@ jobs:
         run: |
           set -a && source .env && set +a
 
-          # Start services without --wait (web healthcheck depends on full Magento setup)
-          docker compose up -d db opensearch valkey php web varnish cron
+          # Start core services (skip varnish — it depends on web being healthy,
+          # and the web healthcheck uses /health_check.php which returns 404 in production
+          # mode because nginx only has select PHP files copied in)
+          docker compose up -d db opensearch valkey php web cron
 
           # Wait for core services to be ready
           echo "Waiting for database..."
