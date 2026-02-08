@@ -26,20 +26,7 @@ This directory contains everything needed to provision and manage the Magento 2 
 
 ## Setup (One-Time)
 
-### 1. GitHub Secrets
-
-Add these secrets to your repository:
-
-| Secret | Description | Required |
-|--------|-------------|----------|
-| `HCLOUD_TOKEN` | Hetzner Cloud API token | ✅ |
-| `HETZNER_DNS_TOKEN` | Hetzner DNS API token (for automatic DNS) | Optional |
-| `DEPLOY_SSH_PRIVATE_KEY` | SSH key for server access (auto-saved on first run) | Auto |
-| `GH_PAT` | Fine-grained GitHub PAT (see below) | ✅ |
-| `PRODUCTION_HOST` | Production server IP (auto-saved by infra workflow) | Auto |
-| `STAGING_HOST` | Staging server IP (auto-saved by infra workflow) | Auto |
-
-### 2. Create `GH_PAT` (Fine-Grained Token)
+### 1. Create `GH_PAT` (Fine-Grained Token)
 
 Create a **fine-grained personal access token** at GitHub → Settings → Developer settings → Fine-grained tokens:
 
@@ -48,7 +35,19 @@ Create a **fine-grained personal access token** at GitHub → Settings → Devel
   - **Actions**: Read & Write (runner registration)
   - **Secrets**: Read & Write (auto-save server IPs & SSH key)
 
-Save it as the `GH_PAT` secret.
+Save it as the `GH_PAT` repository secret.
+
+### 2. GitHub Secrets
+
+Add these secrets to your repository:
+
+| Secret | Description | Required |
+|--------|-------------|----------|
+| `HCLOUD_TOKEN` | Hetzner Cloud API token | ✅ |
+| `HETZNER_DNS_TOKEN` | Hetzner DNS API token (for automatic DNS) | Optional |
+| `DEPLOY_SSH_PRIVATE_KEY` | SSH key for server access (auto-saved on first run) | Auto |
+| `PRODUCTION_HOST` | Production server IP (auto-saved by infra workflow) | Auto |
+| `STAGING_HOST` | Staging server IP (auto-saved by infra workflow) | Auto |
 
 ### 3. GitHub Secrets for Magento Environment
 
