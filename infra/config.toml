@@ -27,7 +27,10 @@ zone = "example.com"
 # ─── Magento Admin ────────────────────────────────────────────────────────────
 
 [production.admin]
-backend_frontname = "admin_x7k9m"
+# The admin panel URL path. For example, if set to "admin_x7k9m",
+# the admin panel will be accessible at https://shop.example.com/admin_x7k9m
+# Use a random string to prevent brute-force attacks on the login page.
+admin_url_path = "admin_x7k9m"
 email = "admin@example.com"
 firstname = "John"
 lastname = "Doe"
@@ -35,24 +38,26 @@ password = "${ADMIN_PASSWORD}"       # GitHub Secret
 
 [staging.admin]
 # Inherits from production. Override only what differs:
-# backend_frontname = "admin_staging"
+# admin_url_path = "admin_staging"
 
-# ─── Email / SMTP ────────────────────────────────────────────────────────────
+# ─── Email ────────────────────────────────────────────────────────────────────
 
 [production.email]
-trans_name = "My Store"
-trans_address = "shop@example.com"
-smtp_transport = "smtp"
+# Sender name and address for transactional emails (order confirmations, etc.)
+sender_name = "My Store"
+sender_address = "shop@example.com"
+
+# SMTP server configuration for outgoing emails
 smtp_host = "mail.example.com"
 smtp_port = 587
 smtp_username = "shop@example.com"
 smtp_password = "${SMTP_PASSWORD}"   # GitHub Secret
-smtp_auth = "login"
-smtp_ssl = "tls"
+smtp_encryption = "tls"              # "tls" or "ssl"
+smtp_authentication = "login"        # "login", "plain", or "none"
 
 [staging.email]
 # Inherits from production. Override only what differs:
-# trans_name = "My Store (Staging)"
+# sender_name = "My Store (Staging)"
 
 # ─── Database ─────────────────────────────────────────────────────────────────
 
@@ -73,4 +78,5 @@ password = "${OPENSEARCH_PASSWORD}"  # GitHub Secret
 # ─── TLS / Let's Encrypt ─────────────────────────────────────────────────────
 
 [production.tls]
-caddy_email = "admin@example.com"
+# Email address for Let's Encrypt certificate notifications
+certificate_email = "admin@example.com"
