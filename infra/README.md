@@ -34,9 +34,10 @@ Add these secrets to your repository:
 |--------|-------------|----------|
 | `HCLOUD_TOKEN` | Hetzner Cloud API token | ✅ |
 | `HETZNER_DNS_TOKEN` | Hetzner DNS API token (for automatic DNS) | Optional |
-| `DEPLOY_SSH_PRIVATE_KEY` | SSH key for server access (auto-generated on first run) | Auto |
-| `GH_PAT` | GitHub PAT with `repo` + `admin:org` for runner registration | Optional |
-| `PRODUCTION_HOST` | Production server IP (set after first infra run) | After setup |
+| `DEPLOY_SSH_PRIVATE_KEY` | SSH key for server access (auto-saved on first run) | Auto |
+| `GH_PAT` | GitHub PAT with `repo` + `admin:org` for runner registration + secret management | ✅ |
+| `PRODUCTION_HOST` | Production server IP (auto-saved by infra workflow) | Auto |
+| `STAGING_HOST` | Staging server IP (auto-saved by infra workflow) | Auto |
 
 ### 2. GitHub Secrets for Magento Environment
 
