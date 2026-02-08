@@ -20,40 +20,14 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
-      - name: Read domain from servers.yaml
-        id: config
-        run: |
-          DOMAIN=$(python3 -c "
-          import yaml
-          with open('infra/servers.yaml') as f:
-              data = yaml.safe_load(f)
-          print(data['servers']['staging']['domain'])
-          ")
-          echo "domain=$DOMAIN" >> "$GITHUB_OUTPUT"
-
       - name: Write environment and secrets
         env:
-          BACKEND_FRONTNAME: ${{ secrets.BACKEND_FRONTNAME }}
-          ADMIN_EMAIL: ${{ secrets.ADMIN_EMAIL }}
-          ADMIN_FIRSTNAME: ${{ secrets.ADMIN_FIRSTNAME }}
-          ADMIN_LASTNAME: ${{ secrets.ADMIN_LASTNAME }}
-          TRANS_EMAIL_NAME: ${{ secrets.TRANS_EMAIL_NAME }}
-          TRANS_EMAIL_ADDRESS: ${{ secrets.TRANS_EMAIL_ADDRESS }}
-          SMTP_TRANSPORT: ${{ secrets.SMTP_TRANSPORT }}
-          SMTP_HOST: ${{ secrets.SMTP_HOST }}
-          SMTP_PORT: ${{ secrets.SMTP_PORT }}
-          SMTP_USERNAME: ${{ secrets.SMTP_USERNAME }}
-          SMTP_AUTH: ${{ secrets.SMTP_AUTH }}
-          SMTP_SSL: ${{ secrets.SMTP_SSL }}
-          DB_USER: ${{ secrets.DB_USER }}
-          DB_NAME: ${{ secrets.DB_NAME }}
-          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
-          MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_ROOT_PASSWORD }}
+          ENV: staging
           ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
           SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_ROOT_PASSWORD }}
           OPENSEARCH_PASSWORD: ${{ secrets.OPENSEARCH_PASSWORD }}
-          CADDY_EMAIL: ${{ secrets.CADDY_EMAIL }}
-          DOMAIN: ${{ steps.config.outputs.domain }}
         run: ./infra/setup-env.sh
 
       - name: Sync repo to deploy directory

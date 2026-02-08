@@ -1,0 +1,76 @@
+# Magento 2 Infrastructure Configuration
+#
+# Non-secret values go here. Secret values use ${SECRET_NAME} placeholders
+# which are resolved from GitHub Secrets at deploy time.
+#
+# Staging inherits all values from production unless overridden.
+
+# ─── Server Infrastructure ───────────────────────────────────────────────────
+
+[servers.production]
+server_type = "cx22"         # Hetzner server type (cx22 = 2 vCPU, 4 GB RAM)
+location = "fsn1"            # Hetzner location (fsn1 = Falkenstein, Germany)
+domain = "shop.example.com"
+github_runner = false
+
+[servers.staging]
+server_type = "cx22"
+location = "fsn1"
+domain = "staging.example.com"
+github_runner = true
+
+# ─── DNS ──────────────────────────────────────────────────────────────────────
+
+[dns]
+zone = "example.com"
+
+# ─── Magento Admin ────────────────────────────────────────────────────────────
+
+[production.admin]
+backend_frontname = "admin_x7k9m"
+email = "admin@example.com"
+firstname = "John"
+lastname = "Doe"
+password = "${ADMIN_PASSWORD}"       # GitHub Secret
+
+[staging.admin]
+# Inherits from production. Override only what differs:
+# backend_frontname = "admin_staging"
+
+# ─── Email / SMTP ────────────────────────────────────────────────────────────
+
+[production.email]
+trans_name = "My Store"
+trans_address = "shop@example.com"
+smtp_transport = "smtp"
+smtp_host = "mail.example.com"
+smtp_port = 587
+smtp_username = "shop@example.com"
+smtp_password = "${SMTP_PASSWORD}"   # GitHub Secret
+smtp_auth = "login"
+smtp_ssl = "tls"
+
+[staging.email]
+# Inherits from production. Override only what differs:
+# trans_name = "My Store (Staging)"
+
+# ─── Database ─────────────────────────────────────────────────────────────────
+
+[production.database]
+user = "magento2"
+name = "magento2"
+password = "${DB_PASSWORD}"          # GitHub Secret
+root_password = "${MYSQL_ROOT_PASSWORD}"  # GitHub Secret
+
+[staging.database]
+# Inherits from production
+
+# ─── OpenSearch ───────────────────────────────────────────────────────────────
+
+[production.opensearch]
+password = "${OPENSEARCH_PASSWORD}"  # GitHub Secret
+
+# ─── TLS / Let's Encrypt ─────────────────────────────────────────────────────
+
+[production.tls]
+caddy_email = "admin@example.com"

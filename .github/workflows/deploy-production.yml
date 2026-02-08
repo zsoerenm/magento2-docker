@@ -8,47 +8,21 @@ on:
 jobs:
   deploy:
     runs-on: [self-hosted, staging]
-    environment: production  # Requires approval if configured
+    environment: production
     env:
       DEPLOY_DIR: /opt/magento2
     steps:
       - name: Checkout
         uses: actions/checkout@v6
 
-      - name: Read domain from servers.yaml
-        id: config
-        run: |
-          DOMAIN=$(python3 -c "
-          import yaml
-          with open('infra/servers.yaml') as f:
-              data = yaml.safe_load(f)
-          print(data['servers']['production']['domain'])
-          ")
-          echo "domain=$DOMAIN" >> "$GITHUB_OUTPUT"
-
-      - name: Write environment and secrets locally (for build)
+      - name: Write environment and secrets (local build)
         env:
-          BACKEND_FRONTNAME: ${{ secrets.BACKEND_FRONTNAME }}
-          ADMIN_EMAIL: ${{ secrets.ADMIN_EMAIL }}
-          ADMIN_FIRSTNAME: ${{ secrets.ADMIN_FIRSTNAME }}
-          ADMIN_LASTNAME: ${{ secrets.ADMIN_LASTNAME }}
-          TRANS_EMAIL_NAME: ${{ secrets.TRANS_EMAIL_NAME }}
-          TRANS_EMAIL_ADDRESS: ${{ secrets.TRANS_EMAIL_ADDRESS }}
-          SMTP_TRANSPORT: ${{ secrets.SMTP_TRANSPORT }}
-          SMTP_HOST: ${{ secrets.SMTP_HOST }}
-          SMTP_PORT: ${{ secrets.SMTP_PORT }}
-          SMTP_USERNAME: ${{ secrets.SMTP_USERNAME }}
-          SMTP_AUTH: ${{ secrets.SMTP_AUTH }}
-          SMTP_SSL: ${{ secrets.SMTP_SSL }}
-          DB_USER: ${{ secrets.DB_USER }}
-          DB_NAME: ${{ secrets.DB_NAME }}
-          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
-          MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_ROOT_PASSWORD }}
+          ENV: production
           ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
           SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_ROOT_PASSWORD }}
           OPENSEARCH_PASSWORD: ${{ secrets.OPENSEARCH_PASSWORD }}
-          CADDY_EMAIL: ${{ secrets.CADDY_EMAIL }}
-          DOMAIN: ${{ steps.config.outputs.domain }}
         run: ./infra/setup-env.sh
 
       - name: Sync repo and build
@@ -82,11 +56,17 @@ jobs:
         env:
           PROD_HOST: ${{ secrets.PRODUCTION_HOST }}
           PROD_SSH_KEY: ${{ secrets.DEPLOY_SSH_PRIVATE_KEY }}
+          ENV: production
+          ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
+          SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_ROOT_PASSWORD }}
+          OPENSEARCH_PASSWORD: ${{ secrets.OPENSEARCH_PASSWORD }}
         run: |
           echo "$PROD_SSH_KEY" > ~/.ssh/prod_key
           chmod 600 ~/.ssh/prod_key
 
-          # Sync repo files
+          # Sync repo files to production
           rsync -a --delete \
             --exclude='.git' \
             --exclude='.env' \
@@ -94,33 +74,17 @@ jobs:
             -e "ssh -i ~/.ssh/prod_key -o StrictHostKeyChecking=no" \
             "$GITHUB_WORKSPACE/" deploy@"$PROD_HOST":/opt/magento2/
 
-          # Write .env and secrets on production
-          # We pipe the setup-env.sh script with env vars over SSH
-          ssh -i ~/.ssh/prod_key -o StrictHostKeyChecking=no deploy@"$PROD_HOST" bash <<'SETUP'
+          # Run setup-env.sh on production via SSH
+          ssh -i ~/.ssh/prod_key -o StrictHostKeyChecking=no deploy@"$PROD_HOST" bash -s <<EOF
             export DEPLOY_DIR=/opt/magento2
-            export BACKEND_FRONTNAME="${{ secrets.BACKEND_FRONTNAME }}"
-            export ADMIN_EMAIL="${{ secrets.ADMIN_EMAIL }}"
-            export ADMIN_FIRSTNAME="${{ secrets.ADMIN_FIRSTNAME }}"
-            export ADMIN_LASTNAME="${{ secrets.ADMIN_LASTNAME }}"
-            export TRANS_EMAIL_NAME="${{ secrets.TRANS_EMAIL_NAME }}"
-            export TRANS_EMAIL_ADDRESS="${{ secrets.TRANS_EMAIL_ADDRESS }}"
-            export SMTP_TRANSPORT="${{ secrets.SMTP_TRANSPORT }}"
-            export SMTP_HOST="${{ secrets.SMTP_HOST }}"
-            export SMTP_PORT="${{ secrets.SMTP_PORT }}"
-            export SMTP_USERNAME="${{ secrets.SMTP_USERNAME }}"
-            export SMTP_AUTH="${{ secrets.SMTP_AUTH }}"
-            export SMTP_SSL="${{ secrets.SMTP_SSL }}"
-            export DB_USER="${{ secrets.DB_USER }}"
-            export DB_NAME="${{ secrets.DB_NAME }}"
-            export DB_PASSWORD="${{ secrets.DB_PASSWORD }}"
-            export MYSQL_ROOT_PASSWORD="${{ secrets.MYSQL_ROOT_PASSWORD }}"
-            export ADMIN_PASSWORD="${{ secrets.ADMIN_PASSWORD }}"
-            export SMTP_PASSWORD="${{ secrets.SMTP_PASSWORD }}"
-            export OPENSEARCH_PASSWORD="${{ secrets.OPENSEARCH_PASSWORD }}"
-            export CADDY_EMAIL="${{ secrets.CADDY_EMAIL }}"
-            export DOMAIN="${{ steps.config.outputs.domain }}"
+            export ENV=production
+            export ADMIN_PASSWORD="$ADMIN_PASSWORD"
+            export SMTP_PASSWORD="$SMTP_PASSWORD"
+            export DB_PASSWORD="$DB_PASSWORD"
+            export MYSQL_ROOT_PASSWORD="$MYSQL_ROOT_PASSWORD"
+            export OPENSEARCH_PASSWORD="$OPENSEARCH_PASSWORD"
             /opt/magento2/infra/setup-env.sh
-SETUP
+EOF
 
           # Deploy
           ssh -i ~/.ssh/prod_key -o StrictHostKeyChecking=no deploy@"$PROD_HOST" bash <<'DEPLOY'
@@ -145,10 +109,14 @@ DEPLOY
           rm -f ~/.ssh/prod_key
 
       - name: Verify production
-        env:
-          PROD_DOMAIN: ${{ steps.config.outputs.domain }}
         run: |
-          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "https://$PROD_DOMAIN" --max-time 30 || echo "000")
+          DOMAIN=$(python3 -c "
+          import tomllib
+          with open('infra/config.toml', 'rb') as f:
+              c = tomllib.load(f)
+          print(c['servers']['production']['domain'])
+          ")
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "https://$DOMAIN" --max-time 30 || echo "000")
           if [ "$HTTP_CODE" = "200" ] || [ "$HTTP_CODE" = "302" ]; then
             echo "✅ Production responding (HTTP $HTTP_CODE)"
           else

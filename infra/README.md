@@ -72,59 +72,27 @@ If you skip this, you'll need to manually point your domains to the server IPs.
 
 ---
 
-### Step 4: Magento Environment Secrets
+### Step 4: Magento Configuration
 
-These configure your Magento shop. They are written to `.env` and `docker/secrets/` on each server automatically during deployment.
+Most configuration lives in `infra/config.toml` — edit it to set admin details, SMTP settings, database names, domains, etc. **Only actual secrets (passwords) need to be GitHub Secrets:**
 
-Add each of the following as a repository secret:
+| Secret | Description |
+|--------|-------------|
+| `ADMIN_PASSWORD` | Magento admin password (letters + numbers required) |
+| `SMTP_PASSWORD` | SMTP mail server password |
+| `DB_PASSWORD` | MariaDB user password |
+| `MYSQL_ROOT_PASSWORD` | MariaDB root password |
+| `OPENSEARCH_PASSWORD` | OpenSearch admin password |
 
-**Admin configuration:**
+In `config.toml`, these are referenced as `${SECRET_NAME}` placeholders. The deploy workflows inject them from GitHub Secrets at deploy time.
 
-| Secret | Description | Example |
-|--------|-------------|---------|
-| `BACKEND_FRONTNAME` | Admin URL path (keep secret for security) | `admin_x7k9m` |
-| `ADMIN_EMAIL` | Admin account email | `admin@example.com` |
-| `ADMIN_FIRSTNAME` | Admin first name | `John` |
-| `ADMIN_LASTNAME` | Admin last name | `Doe` |
-| `ADMIN_PASSWORD` | Admin password (must contain letters + numbers) | `MySecurePass123` |
-
-**Email / SMTP:**
-
-| Secret | Description | Example |
-|--------|-------------|---------|
-| `TRANS_EMAIL_NAME` | Store name for transactional emails | `My Store` |
-| `TRANS_EMAIL_ADDRESS` | From address for transactional emails | `shop@example.com` |
-| `SMTP_TRANSPORT` | Transport protocol | `smtp` |
-| `SMTP_HOST` | SMTP server hostname | `mail.example.com` |
-| `SMTP_PORT` | SMTP port | `587` |
-| `SMTP_USERNAME` | SMTP username | `shop@example.com` |
-| `SMTP_PASSWORD` | SMTP password | *(your password)* |
-| `SMTP_AUTH` | Authentication method | `login` |
-| `SMTP_SSL` | Encryption method | `tls` |
-
-**Database:**
-
-| Secret | Description | Example |
-|--------|-------------|---------|
-| `DB_USER` | MariaDB user | `magento2` |
-| `DB_NAME` | MariaDB database name | `magento2` |
-| `DB_PASSWORD` | MariaDB user password | *(strong password)* |
-| `MYSQL_ROOT_PASSWORD` | MariaDB root password | *(strong password)* |
-
-**Other:**
-
-| Secret | Description | Example |
-|--------|-------------|---------|
-| `OPENSEARCH_PASSWORD` | OpenSearch admin password | *(strong password)* |
-| `CADDY_EMAIL` | Email for Let's Encrypt certificates | `admin@example.com` |
-
-> **Note:** Domains are read from `infra/servers.yaml` — no need to add them as secrets.
+Staging inherits all values from production unless explicitly overridden in a `[staging.*]` section. See `infra/config.toml` for the full structure and examples.
 
 ---
 
 ### Step 5: Configure Servers
 
-Edit `infra/servers.yaml` to set your desired server types, locations, and domains. Commit and push to `master`.
+Edit `infra/config.toml` to set your server types, locations, domains, and all non-secret configuration. Commit and push to `master`.
 
 ---
 
