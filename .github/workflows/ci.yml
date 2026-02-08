@@ -94,6 +94,14 @@ jobs:
 
       # ─── Validate config.toml ─────────────────────────────────────────────
 
+      - name: Switch to production mode
+        run: |
+          # Remove development overrides so we test the production setup
+          # (docker-compose.override.yml mounts ./src over the baked-in source)
+          rm -f docker-compose.override.yml
+          # Remove development .env (will be replaced by setup-env.sh)
+          rm -f .env
+
       - name: Validate infrastructure config
         run: |
           python3 -c "
@@ -129,11 +137,12 @@ jobs:
 
       # ─── Build production images ──────────────────────────────────────────
 
-      - name: Build Docker images
+      - name: Build production Docker images
         run: |
           set -a && source .env && set +a
+          # Build production images (source baked in, no volume mounts)
           docker compose build php web varnish
-          echo "✅ All images built"
+          echo "✅ All production images built"
 
       # ─── Full stack smoke test ─────────────────────────────────────────────
 
