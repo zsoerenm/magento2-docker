@@ -35,11 +35,22 @@ Add these secrets to your repository:
 | `HCLOUD_TOKEN` | Hetzner Cloud API token | ✅ |
 | `HETZNER_DNS_TOKEN` | Hetzner DNS API token (for automatic DNS) | Optional |
 | `DEPLOY_SSH_PRIVATE_KEY` | SSH key for server access (auto-saved on first run) | Auto |
-| `GH_PAT` | GitHub PAT with `repo` + `admin:org` for runner registration + secret management | ✅ |
+| `GH_PAT` | Fine-grained GitHub PAT (see below) | ✅ |
 | `PRODUCTION_HOST` | Production server IP (auto-saved by infra workflow) | Auto |
 | `STAGING_HOST` | Staging server IP (auto-saved by infra workflow) | Auto |
 
-### 2. GitHub Secrets for Magento Environment
+### 2. Create `GH_PAT` (Fine-Grained Token)
+
+Create a **fine-grained personal access token** at GitHub → Settings → Developer settings → Fine-grained tokens:
+
+- **Repository access**: Only select `magento2-docker`
+- **Permissions**:
+  - **Actions**: Read & Write (runner registration)
+  - **Secrets**: Read & Write (auto-save server IPs & SSH key)
+
+Save it as the `GH_PAT` secret.
+
+### 3. GitHub Secrets for Magento Environment
 
 These are written to `.env` and `docker/secrets/` on each server automatically by the deploy workflows.
 
@@ -69,11 +80,11 @@ These are written to `.env` and `docker/secrets/` on each server automatically b
 
 Domains are read from `infra/servers.yaml` — no need to duplicate them as secrets.
 
-### 3. Configure Servers
+### 4. Configure Servers
 
 Edit `servers.yaml` to set your desired server types, locations, and domains.
 
-### 4. Run Infrastructure Workflow
+### 5. Run Infrastructure Workflow
 
 Either push changes to `infra/` or manually trigger the "Infrastructure" workflow.
 
