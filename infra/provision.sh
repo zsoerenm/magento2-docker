@@ -4,7 +4,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-CONFIG="$SCRIPT_DIR/servers.yaml"
+CONFIG="$SCRIPT_DIR/config.toml"
 
 # Requires: HCLOUD_TOKEN, DEPLOY_SSH_PUBKEY, DEPLOY_SSH_PRIVKEY_PATH
 # Optional: HETZNER_DNS_TOKEN (for DNS management)
@@ -16,12 +16,12 @@ CONFIG="$SCRIPT_DIR/servers.yaml"
 log() { echo "==> $*"; }
 err() { echo "ERROR: $*" >&2; exit 1; }
 
-yaml_get() {
-  # Simple YAML value extraction (requires python3 + PyYAML or yq)
+cfg_get() {
+  # TOML value extraction (requires python3 with tomllib, available in 3.11+)
   python3 -c "
-import yaml, sys
-with open('$CONFIG') as f:
-    data = yaml.safe_load(f)
+import tomllib
+with open('$CONFIG', 'rb') as f:
+    data = tomllib.load(f)
 keys = '$1'.split('.')
 val = data
 for k in keys:
@@ -36,7 +36,7 @@ print(val)
 
 ensure_ssh_key() {
   local key_name
-  key_name=$(yaml_get "hetzner.ssh_key_name")
+  key_name=$(cfg_get "hetzner.ssh_key_name")
 
   log "Ensuring SSH key '$key_name' exists in Hetzner Cloud..."
 
@@ -56,13 +56,13 @@ ensure_ssh_key() {
 ensure_server() {
   local env="$1"
   local server_type location hostname
-  server_type=$(yaml_get "servers.$env.server_type")
-  location=$(yaml_get "servers.$env.location")
-  hostname=$(yaml_get "servers.$env.hostname")
+  server_type=$(cfg_get "servers.$env.server_type")
+  location=$(cfg_get "servers.$env.location")
+  hostname=$(cfg_get "servers.$env.hostname")
 
   local server_name="magento2-$hostname"
   local ssh_key_name
-  ssh_key_name=$(yaml_get "hetzner.ssh_key_name")
+  ssh_key_name=$(cfg_get "hetzner.ssh_key_name")
 
   log "Ensuring server '$server_name' ($server_type @ $location)..."
 
@@ -130,8 +130,8 @@ INFECT
 ensure_dns() {
   local env="$1"
   local domain ip
-  domain=$(yaml_get "servers.$env.domain")
-  ip=$(hcloud server ip "magento2-$(yaml_get "servers.$env.hostname")")
+  domain=$(cfg_get "servers.$env.domain")
+  ip=$(hcloud server ip "magento2-$(cfg_get "servers.$env.hostname")")
 
   if [ -z "${HETZNER_DNS_TOKEN:-}" ]; then
     log "HETZNER_DNS_TOKEN not set, skipping DNS for $domain"
@@ -139,7 +139,7 @@ ensure_dns() {
   fi
 
   local zone_name
-  zone_name=$(yaml_get "dns.zone")
+  zone_name=$(cfg_get "dns.zone")
 
   log "Setting up DNS: $domain -> $ip"
 
@@ -190,7 +190,7 @@ ensure_dns() {
 push_nixos_config() {
   local env="$1"
   local ip
-  ip=$(hcloud server ip "magento2-$(yaml_get "servers.$env.hostname")")
+  ip=$(hcloud server ip "magento2-$(cfg_get "servers.$env.hostname")")
 
   log "Pushing NixOS configuration to $env ($ip)..."
 
@@ -215,14 +215,14 @@ EOF
 setup_github_runner() {
   local env="$1"
   local has_runner
-  has_runner=$(yaml_get "servers.$env.github_runner")
+  has_runner=$(cfg_get "servers.$env.github_runner")
 
   if [ "$has_runner" != "True" ] && [ "$has_runner" != "true" ]; then
     return
   fi
 
   local ip
-  ip=$(hcloud server ip "magento2-$(yaml_get "servers.$env.hostname")")
+  ip=$(hcloud server ip "magento2-$(cfg_get "servers.$env.hostname")")
 
   log "Setting up GitHub Actions runner on $env ($ip)..."
 
