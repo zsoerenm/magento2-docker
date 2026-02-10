@@ -76,6 +76,14 @@ print(f'MYSQL_ROOT_PASSWORD={get("database", "root_password")}')
 print(f'OPENSEARCH_PASSWORD={get("opensearch", "password")}')
 print(f'CADDY_EMAIL={get("tls", "certificate_email")}')
 print(f'DOMAIN={domain}')
+
+# Staging access restriction
+staging_user = get("access", "username")
+staging_pass = get("access", "password")
+if staging_user and staging_pass:
+    print(f'STAGING_USERNAME={staging_user}')
+    print(f'STAGING_PASSWORD={staging_pass}')
+    print(f'CADDY_CONFIG=staging')
 PYEOF
 }
 
@@ -110,5 +118,35 @@ echo -n "$(get_val SMTP_PASSWORD)"       > "$DEPLOY_DIR/docker/secrets/smtp_pass
 
 chmod 600 "$DEPLOY_DIR/docker/secrets/"*.txt
 chmod 600 "$DEPLOY_DIR/.env"
+
+###############################################################################
+# Select Caddyfile based on environment
+###############################################################################
+
+CADDY_CONFIG=$(get_val CADDY_CONFIG)
+CADDY_CONF_DIR="$DEPLOY_DIR/docker/caddy/conf"
+
+if [ "$CADDY_CONFIG" = "staging" ]; then
+  # Generate bcrypt hash for basic auth (Caddy requires bcrypt)
+  STAGING_PASS=$(get_val STAGING_PASSWORD)
+  if command -v caddy &>/dev/null; then
+    HASH=$(caddy hash-password --plaintext "$STAGING_PASS")
+  elif command -v docker &>/dev/null; then
+    HASH=$(docker run --rm caddy:2-alpine caddy hash-password --plaintext "$STAGING_PASS")
+  else
+    echo "WARNING: Cannot hash staging password (no caddy or docker available)"
+    HASH=""
+  fi
+
+  if [ -n "$HASH" ]; then
+    # Add hashed password to .env
+    echo "export STAGING_PASSWORD_HASH=$HASH" >> "$DEPLOY_DIR/.env"
+    # Use staging Caddyfile
+    if [ -f "$CADDY_CONF_DIR/Caddyfile.staging" ]; then
+      cp "$CADDY_CONF_DIR/Caddyfile.staging" "$CADDY_CONF_DIR/Caddyfile"
+      echo "✅ Staging Caddyfile with basic auth activated"
+    fi
+  fi
+fi
 
 echo "✅ Environment and secrets written to $DEPLOY_DIR (env: $ENV)"
