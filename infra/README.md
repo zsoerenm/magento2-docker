@@ -125,46 +125,48 @@ On first run, it will:
 - No container registry needed
 - No GitHub Actions minutes for builds (self-hosted runner)
 
-## Creating Your Private Shop (Fork)
+## Creating Your Private Shop
 
-This repository provides the infrastructure and Docker setup. To build your own Magento shop on top of it, **fork this repo** into a private repository:
+This repository is a **GitHub template**. To build your own Magento shop on top of it, create a private repository from the template:
 
-### 1. Fork
+### 1. Create from template
 
-On GitHub, click **Fork** on this repo. Make the fork **private** — it will contain your shop-specific code and configuration.
+On GitHub, click the green **"Use this template"** → **"Create a new repository"**. Set it to **Private** — it will contain your shop-specific code and configuration.
 
 ### 2. Customize
 
-Add your shop-specific files to the fork. The public repo doesn't touch these paths, so upstream merges stay clean:
+Add your shop-specific files. The template repo doesn't touch these paths, so upstream syncs stay clean:
 
 ```
-your-private-fork/
+your-private-repo/
 ├── infra/config.toml              # ← Edit: your real domains, server config, etc.
 ├── src/
 │   ├── app/code/YourVendor/       # ← Your custom Magento modules
 │   ├── app/design/frontend/       # ← Your custom theme
 │   └── composer.json              # ← Add your dependencies
 ├── docker-compose.override.yml    # ← Optional: extra services, dev volumes
-└── .github/workflows/             # ← Inherited from upstream, works as-is
+└── .github/workflows/             # ← Inherited from template, works as-is
 ```
 
 ### 3. Set up GitHub Secrets
 
-Follow the [Setup (One-Time)](#setup-one-time) steps above in your private fork.
+Follow the [Setup (One-Time)](#setup-one-time) steps above in your private repo.
 
 ### 4. Syncing with upstream
 
-When the public repo gets updates (new Docker improvements, workflow fixes, dependency bumps), pull them into your fork:
+When the template repo gets updates (Docker improvements, workflow fixes, dependency bumps), pull them into your repo:
 
 ```bash
-# One-time: add the public repo as upstream remote
+# One-time: add the template repo as upstream remote
 git remote add upstream https://github.com/zsoerenm/magento2-docker.git
 
 # Fetch and merge upstream changes
 git fetch upstream
-git merge upstream/master
+git merge upstream/master --allow-unrelated-histories
 ```
+
+> **Note:** The `--allow-unrelated-histories` flag is needed for the first merge because template repos don't share git history with the source. After the first successful merge, future syncs are just `git fetch upstream && git merge upstream/master` — no special flags needed.
 
 If there are merge conflicts, they'll typically be in files like `docker-compose.yml` or `Dockerfile`s. Resolve them, test on staging (push to `master`), then create a release to deploy to production.
 
-**Tip:** To stay informed about upstream changes, click **Watch** → **Releases only** on the public repo.
+**Tip:** To stay informed about upstream changes, click **Watch** → **Releases only** on the template repo.
