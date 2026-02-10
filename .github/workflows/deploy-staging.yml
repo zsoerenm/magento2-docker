@@ -28,6 +28,7 @@ jobs:
           DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
           MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_ROOT_PASSWORD }}
           OPENSEARCH_PASSWORD: ${{ secrets.OPENSEARCH_PASSWORD }}
+          STAGING_PASSWORD: ${{ secrets.STAGING_PASSWORD }}
         run: ./infra/setup-env.sh
 
       - name: Sync repo to deploy directory
