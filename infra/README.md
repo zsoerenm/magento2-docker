@@ -121,7 +121,7 @@ On first run, it will:
 
 ## Cost Estimate
 
-- 2× CX22 (2 vCPU, 4 GB): ~€8.70/month
+- 2× CX23 (2 vCPU, 4 GB): ~€6.98/month (upgrade to CX33 or higher for production)
 - No container registry needed
 - No GitHub Actions minutes for builds (self-hosted runner)
 
