@@ -28,7 +28,16 @@ This directory contains everything needed to provision and manage the Magento 2 
 
 All configuration is done through **GitHub repository secrets**. No manual SSH access is needed.
 
-To add secrets: go to your repository on GitHub → **Settings** → **Secrets and variables** → **Actions** → **New repository secret**.
+#### How to add a GitHub Secret
+
+1. Go to your repository on GitHub (e.g. `https://github.com/your-username/your-repo`)
+2. Click **Settings** (top menu bar, far right — you need admin access)
+3. In the left sidebar, expand **Secrets and variables** → click **Actions**
+4. Click the green **"New repository secret"** button
+5. Enter the **Name** (e.g. `HCLOUD_TOKEN`) and **Secret** value
+6. Click **"Add secret"**
+
+Repeat for each secret listed below. Names must match exactly (uppercase, underscores).
 
 ---
 
