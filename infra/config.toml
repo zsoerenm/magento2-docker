@@ -8,13 +8,16 @@
 # ─── Server Infrastructure ───────────────────────────────────────────────────
 
 [servers.production]
-server_type = "cx22"         # Hetzner server type (cx22 = 2 vCPU, 4 GB RAM)
+# Hetzner server type. CX23 (2 vCPU, 4 GB RAM, €3.49/mo) is fine for initial
+# setup and testing. For a live shop, upgrade to CX33 (4 vCPU, 8 GB) or higher.
+# See https://www.hetzner.com/cloud for current plans.
+server_type = "cx23"
 location = "fsn1"            # Hetzner location (fsn1 = Falkenstein, Germany)
 domain = "shop.example.com"
 github_runner = false
 
 [servers.staging]
-server_type = "cx22"
+server_type = "cx23"
 location = "fsn1"
 domain = "staging.example.com"
 github_runner = true
