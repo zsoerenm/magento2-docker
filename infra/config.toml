@@ -80,3 +80,11 @@ password = "${OPENSEARCH_PASSWORD}"  # GitHub Secret
 [production.tls]
 # Email address for Let's Encrypt certificate notifications
 certificate_email = "admin@example.com"
+
+# ─── Staging Access Restriction ───────────────────────────────────────────────
+
+[staging.access]
+# Basic auth protects the staging site from public access.
+# Username is not secret; password is a GitHub Secret.
+username = "staging"
+password = "${STAGING_PASSWORD}"     # GitHub Secret

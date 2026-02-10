@@ -83,6 +83,7 @@ Most configuration lives in `infra/config.toml` — edit it to set admin details
 | `DB_PASSWORD` | MariaDB user password |
 | `MYSQL_ROOT_PASSWORD` | MariaDB root password |
 | `OPENSEARCH_PASSWORD` | OpenSearch admin password |
+| `STAGING_PASSWORD` | Basic auth password for staging site (keeps it private) |
 
 In `config.toml`, these are referenced as `${SECRET_NAME}` placeholders. The deploy workflows inject them from GitHub Secrets at deploy time.
 
