@@ -73,8 +73,9 @@ This token lets the workflow create and manage your VPS instances.
 
 If you want automatic DNS record management (recommended):
 
-1. Go to [Hetzner DNS Console](https://dns.hetzner.com/) → **API Tokens**
-2. Create a new token
+1. Go to [Hetzner Console](https://console.hetzner.cloud/) → **DNS** (in the left sidebar)
+   > **Note:** Hetzner DNS has moved from the old DNS Console (`dns.hetzner.com`) to the main Hetzner Console. New DNS zones can only be created there. Existing zones can be migrated via zone settings — see [Hetzner DNS FAQ](https://docs.hetzner.com/dns-console/dns/general/dns-console-moving/) for details.
+2. Create an **API Token** for DNS management
 3. Add it as a repository secret named **`HETZNER_DNS_TOKEN`**
 
 If you skip this, you'll need to manually point your domains to the server IPs.
