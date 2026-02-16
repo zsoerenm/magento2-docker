@@ -69,16 +69,16 @@ This token lets the workflow create and manage your VPS instances.
 
 ---
 
-### Step 3 (Optional): Hetzner DNS Token (`HETZNER_DNS_TOKEN`)
+### Step 3 (Optional): Hetzner DNS
 
 If you want automatic DNS record management (recommended):
 
 1. Go to [Hetzner Console](https://console.hetzner.cloud/) → select your **project** → **DNS** (in the left sidebar)
-   > **Note:** You must be inside a project to see the DNS entry in the sidebar. Hetzner DNS has moved from the old DNS Console (`dns.hetzner.com`) to the main Hetzner Console. New DNS zones can only be created there. Existing zones can be migrated via zone settings — see [Hetzner DNS FAQ](https://docs.hetzner.com/dns-console/dns/general/dns-console-moving/) for details.
-2. Create an **API Token** for DNS management
-3. Add it as a repository secret named **`HETZNER_DNS_TOKEN`**
+   > **Note:** You must be inside a project to see the DNS entry in the sidebar. Hetzner DNS has moved from the old DNS Console (`dns.hetzner.com`) to the main Hetzner Console. New DNS zones can only be created there. Existing zones can be migrated via zone settings — see [Hetzner DNS migration guide](https://docs.hetzner.com/networking/dns/migration-to-hetzner-console/process/).
+2. Create your DNS zone for your domain
+3. DNS is now managed via the **Cloud API**, so your existing `HCLOUD_TOKEN` (from Step 1) handles DNS as well — **no separate DNS token needed**
 
-If you skip this, you'll need to manually point your domains to the server IPs.
+If you skip this, you'll need to manually point your domains to the server IPs with your existing DNS provider.
 
 ---
 
@@ -116,7 +116,7 @@ On first run, it will:
 2. ✅ Install NixOS on both servers
 3. ✅ Configure Docker, firewall, SSH hardening, swap
 4. ✅ Set up a self-hosted GitHub Actions runner on staging
-5. ✅ Configure DNS records (if `HETZNER_DNS_TOKEN` is set)
+5. ✅ Configure DNS records (if a DNS zone exists in the project)
 6. ✅ Auto-save `DEPLOY_SSH_PRIVATE_KEY`, `STAGING_HOST`, and `PRODUCTION_HOST` as GitHub Secrets
 
 **No manual SSH required.** Everything is fully automated from this point on.

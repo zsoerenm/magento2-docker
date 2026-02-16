@@ -7,7 +7,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CONFIG="$SCRIPT_DIR/config.toml"
 
 # Requires: HCLOUD_TOKEN, DEPLOY_SSH_PUBKEY, DEPLOY_SSH_PRIVKEY_PATH
-# Optional: HETZNER_DNS_TOKEN (for DNS management)
+# DNS management uses HCLOUD_TOKEN (Cloud API) — no separate DNS token needed
 
 ###############################################################################
 # Helpers
@@ -133,8 +133,8 @@ ensure_dns() {
   domain=$(cfg_get "servers.$env.domain")
   ip=$(hcloud server ip "magento2-$(cfg_get "servers.$env.hostname")")
 
-  if [ -z "${HETZNER_DNS_TOKEN:-}" ]; then
-    log "HETZNER_DNS_TOKEN not set, skipping DNS for $domain"
+  if [ -z "${HCLOUD_TOKEN:-}" ]; then
+    log "HCLOUD_TOKEN not set, skipping DNS for $domain"
     return
   fi
 
@@ -143,44 +143,36 @@ ensure_dns() {
 
   log "Setting up DNS: $domain -> $ip"
 
-  # Get zone ID
+  # Get zone ID via Cloud API
   local zone_id
-  zone_id=$(curl -s -H "Auth-API-Token: $HETZNER_DNS_TOKEN" \
-    "https://dns.hetzner.com/api/v1/zones" | \
+  zone_id=$(curl -s -H "Authorization: Bearer $HCLOUD_TOKEN" \
+    "https://api.hetzner.cloud/v1/zones" | \
     jq -r ".zones[] | select(.name == \"$zone_name\") | .id")
 
   if [ -z "$zone_id" ]; then
-    err "DNS zone '$zone_name' not found in Hetzner DNS"
+    err "DNS zone '$zone_name' not found. Create it in Hetzner Console → project → DNS first."
   fi
 
   # Extract record name (subdomain part)
   local record_name="${domain%%.$zone_name}"
 
-  # Check if record exists
-  local existing_record_id
-  existing_record_id=$(curl -s -H "Auth-API-Token: $HETZNER_DNS_TOKEN" \
-    "https://dns.hetzner.com/api/v1/records?zone_id=$zone_id" | \
-    jq -r ".records[] | select(.name == \"$record_name\" and .type == \"A\") | .id")
+  # Upsert A record via Cloud API RRset endpoint
+  log "Setting DNS record: $record_name.$zone_name -> $ip"
+  local response
+  response=$(curl -s -w "\n%{http_code}" -X PUT \
+    -H "Authorization: Bearer $HCLOUD_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d "$(jq -n --arg ip "$ip" '{ttl: 300, records: [{value: $ip}]}')" \
+    "https://api.hetzner.cloud/v1/zones/$zone_id/rrsets/$record_name/A")
 
-  local payload
-  payload=$(jq -n --arg name "$record_name" --arg ip "$ip" --arg zone "$zone_id" \
-    '{type: "A", name: $name, value: $ip, zone_id: $zone, ttl: 300}')
-
-  if [ -n "$existing_record_id" ]; then
-    log "Updating DNS record for $domain..."
-    curl -s -X PUT -H "Auth-API-Token: $HETZNER_DNS_TOKEN" \
-      -H "Content-Type: application/json" \
-      -d "$payload" \
-      "https://dns.hetzner.com/api/v1/records/$existing_record_id" > /dev/null
+  local http_code
+  http_code=$(echo "$response" | tail -1)
+  if [ "$http_code" -ge 200 ] && [ "$http_code" -lt 300 ]; then
+    log "DNS record set: $domain -> $ip"
   else
-    log "Creating DNS record for $domain..."
-    curl -s -X POST -H "Auth-API-Token: $HETZNER_DNS_TOKEN" \
-      -H "Content-Type: application/json" \
-      -d "$payload" \
-      "https://dns.hetzner.com/api/v1/records" > /dev/null
+    log "WARNING: DNS update failed (HTTP $http_code). Set A record manually: $domain -> $ip"
+    log "Response: $(echo "$response" | head -1)"
   fi
-
-  log "DNS record set: $domain -> $ip"
 }
 
 ###############################################################################
