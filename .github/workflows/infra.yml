@@ -14,7 +14,6 @@ permissions:
 
 env:
   HCLOUD_TOKEN: ${{ secrets.HCLOUD_TOKEN }}
-  HETZNER_DNS_TOKEN: ${{ secrets.HETZNER_DNS_TOKEN }}
 
 jobs:
   provision:
