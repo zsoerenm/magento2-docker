@@ -1,0 +1,124 @@
+name: Deploy to Production
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: [self-hosted, staging]
+    environment: production
+    env:
+      DEPLOY_DIR: /opt/magento2
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Write environment and secrets (local build)
+        env:
+          ENV: production
+          ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
+          SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_ROOT_PASSWORD }}
+          OPENSEARCH_PASSWORD: ${{ secrets.OPENSEARCH_PASSWORD }}
+        run: ./infra/setup-env.sh
+
+      - name: Sync repo and build
+        working-directory: /opt/magento2
+        run: |
+          rsync -a --delete \
+            --exclude='.git' \
+            --exclude='.env' \
+            --exclude='docker/secrets' \
+            "$GITHUB_WORKSPACE/" "$DEPLOY_DIR/"
+
+          set -a && source .env && set +a
+          docker compose build
+
+      - name: Transfer images to production
+        env:
+          PROD_HOST: ${{ secrets.PRODUCTION_HOST }}
+          PROD_SSH_KEY: ${{ secrets.DEPLOY_SSH_PRIVATE_KEY }}
+        run: |
+          mkdir -p ~/.ssh
+          echo "$PROD_SSH_KEY" > ~/.ssh/prod_key
+          chmod 600 ~/.ssh/prod_key
+          ssh-keyscan -H "$PROD_HOST" >> ~/.ssh/known_hosts 2>/dev/null
+
+          IMAGES=$(cd "$DEPLOY_DIR" && set -a && source .env && set +a && docker compose config --images | sort -u)
+          echo "Transferring images to production..."
+          docker save $IMAGES | ssh -i ~/.ssh/prod_key -o StrictHostKeyChecking=no deploy@"$PROD_HOST" "docker load"
+          echo "Images transferred."
+
+      - name: Deploy on production
+        env:
+          PROD_HOST: ${{ secrets.PRODUCTION_HOST }}
+          PROD_SSH_KEY: ${{ secrets.DEPLOY_SSH_PRIVATE_KEY }}
+          ENV: production
+          ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
+          SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_ROOT_PASSWORD }}
+          OPENSEARCH_PASSWORD: ${{ secrets.OPENSEARCH_PASSWORD }}
+        run: |
+          echo "$PROD_SSH_KEY" > ~/.ssh/prod_key
+          chmod 600 ~/.ssh/prod_key
+
+          # Sync repo files to production
+          rsync -a --delete \
+            --exclude='.git' \
+            --exclude='.env' \
+            --exclude='docker/secrets' \
+            -e "ssh -i ~/.ssh/prod_key -o StrictHostKeyChecking=no" \
+            "$GITHUB_WORKSPACE/" deploy@"$PROD_HOST":/opt/magento2/
+
+          # Run setup-env.sh on production via SSH
+          ssh -i ~/.ssh/prod_key -o StrictHostKeyChecking=no deploy@"$PROD_HOST" bash -s <<EOF
+            export DEPLOY_DIR=/opt/magento2
+            export ENV=production
+            export ADMIN_PASSWORD="$ADMIN_PASSWORD"
+            export SMTP_PASSWORD="$SMTP_PASSWORD"
+            export DB_PASSWORD="$DB_PASSWORD"
+            export MYSQL_ROOT_PASSWORD="$MYSQL_ROOT_PASSWORD"
+            export OPENSEARCH_PASSWORD="$OPENSEARCH_PASSWORD"
+            /opt/magento2/infra/setup-env.sh
+EOF
+
+          # Deploy
+          ssh -i ~/.ssh/prod_key -o StrictHostKeyChecking=no deploy@"$PROD_HOST" bash <<'DEPLOY'
+            cd /opt/magento2
+            set -a && source .env && set +a
+            docker compose up -d
+
+            echo "Waiting for services..."
+            for i in $(seq 1 90); do
+              if docker compose ps | grep -q "unhealthy"; then
+                sleep 5
+              else
+                echo "All services healthy!"
+                docker compose ps
+                exit 0
+              fi
+            done
+            echo "WARNING: Some services may not be healthy yet"
+            docker compose ps
+DEPLOY
+
+          rm -f ~/.ssh/prod_key
+
+      - name: Verify production
+        run: |
+          DOMAIN=$(python3 -c "
+          import tomllib
+          with open('infra/config.toml', 'rb') as f:
+              c = tomllib.load(f)
+          print(c['servers']['production']['domain'])
+          ")
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "https://$DOMAIN" --max-time 30 || echo "000")
+          if [ "$HTTP_CODE" = "200" ] || [ "$HTTP_CODE" = "302" ]; then
+            echo "✅ Production responding (HTTP $HTTP_CODE)"
+          else
+            echo "⚠️ Production returned HTTP $HTTP_CODE"
+          fi

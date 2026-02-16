@@ -1,0 +1,93 @@
+# Magento 2 Infrastructure Configuration
+#
+# Non-secret values go here. Secret values use ${SECRET_NAME} placeholders
+# which are resolved from GitHub Secrets at deploy time.
+#
+# Staging inherits all values from production unless overridden.
+
+# ─── Server Infrastructure ───────────────────────────────────────────────────
+
+[servers.production]
+# Hetzner server type. CX23 (2 vCPU, 4 GB RAM, €3.49/mo) is fine for initial
+# setup and testing. For a live shop, upgrade to CX33 (4 vCPU, 8 GB) or higher.
+# See https://www.hetzner.com/cloud for current plans.
+server_type = "cx23"
+location = "fsn1"            # Hetzner location (fsn1 = Falkenstein, Germany)
+domain = "shop.example.com"
+github_runner = false
+
+[servers.staging]
+server_type = "cx23"
+location = "fsn1"
+domain = "staging.example.com"
+github_runner = true
+
+# ─── DNS ──────────────────────────────────────────────────────────────────────
+
+[dns]
+zone = "example.com"
+
+# ─── Magento Admin ────────────────────────────────────────────────────────────
+
+[production.admin]
+# The admin panel URL path. For example, if set to "admin_x7k9m",
+# the admin panel will be accessible at https://shop.example.com/admin_x7k9m
+# Use a random string to prevent brute-force attacks on the login page.
+admin_url_path = "admin_x7k9m"
+email = "admin@example.com"
+firstname = "John"
+lastname = "Doe"
+password = "${ADMIN_PASSWORD}"       # GitHub Secret
+
+[staging.admin]
+# Inherits from production. Override only what differs:
+# admin_url_path = "admin_staging"
+
+# ─── Email ────────────────────────────────────────────────────────────────────
+
+[production.email]
+# Sender name and address for transactional emails (order confirmations, etc.)
+sender_name = "My Store"
+sender_address = "shop@example.com"
+
+# SMTP server configuration for outgoing emails
+smtp_host = "mail.example.com"
+smtp_port = 587
+smtp_username = "shop@example.com"
+smtp_password = "${SMTP_PASSWORD}"   # GitHub Secret
+smtp_encryption = "tls"              # "tls" or "ssl"
+smtp_authentication = "login"        # "login", "plain", or "none"
+
+[staging.email]
+# Inherits from production. Override only what differs:
+# sender_name = "My Store (Staging)"
+
+# ─── Database ─────────────────────────────────────────────────────────────────
+
+[production.database]
+user = "magento2"
+name = "magento2"
+password = "${DB_PASSWORD}"          # GitHub Secret
+root_password = "${MYSQL_ROOT_PASSWORD}"  # GitHub Secret
+
+[staging.database]
+# Inherits from production
+
+# ─── OpenSearch ───────────────────────────────────────────────────────────────
+
+[production.opensearch]
+password = "${OPENSEARCH_PASSWORD}"  # GitHub Secret
+
+# ─── TLS / Let's Encrypt ─────────────────────────────────────────────────────
+
+[production.tls]
+# Email address for Let's Encrypt certificate notifications
+certificate_email = "admin@example.com"
+
+# ─── Staging Access Restriction ───────────────────────────────────────────────
+
+[staging.access]
+# Basic auth protects the staging site from public access.
+# Username is not secret; password is a GitHub Secret.
+username = "staging"
+password = "${STAGING_PASSWORD}"     # GitHub Secret

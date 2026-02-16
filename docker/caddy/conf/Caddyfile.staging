@@ -1,0 +1,23 @@
+# Staging Caddyfile - Let's Encrypt + Basic Auth
+# Protects the staging site from public access.
+
+{
+  email {$CADDY_EMAIL}
+}
+
+{$DOMAIN} {
+  encode gzip
+
+  tls {
+    protocols tls1.2 tls1.3
+  }
+
+  basic_auth {
+    {$STAGING_USERNAME} {$STAGING_PASSWORD_HASH}
+  }
+
+  reverse_proxy varnish:80 {
+    header_up X-Forwarded-Proto {scheme}
+    header_up X-Forwarded-For {remote}
+  }
+}
