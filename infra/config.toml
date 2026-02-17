@@ -27,6 +27,14 @@ github_runner = true
 [dns]
 zone = "example.com"
 
+# ─── Mail Server (Optional) ────────────────────────────────────────────────
+
+[mail]
+# Leave empty or remove to skip mail server setup
+domain = ""
+# Admin email for Stalwart web UI login
+admin_email = ""
+
 # ─── Magento Admin ────────────────────────────────────────────────────────────
 
 [production.admin]

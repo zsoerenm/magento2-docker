@@ -1,0 +1,33 @@
+services:
+  stalwart:
+    image: stalwartlabs/stalwart:latest
+    container_name: stalwart-mail
+    restart: unless-stopped
+    hostname: ${MAIL_DOMAIN}
+    environment:
+      - STALWART_ADMIN_EMAIL=${MAIL_ADMIN_EMAIL:-admin@${MAIL_DOMAIN}}
+      - STALWART_ADMIN_PASSWORD=${STALWART_ADMIN_PASSWORD}
+    volumes:
+      - stalwart_data:/opt/stalwart-mail
+    ports:
+      - "25:25"
+      - "587:587"
+      - "993:993"
+    networks:
+      - shared-proxy
+      - mail-internal
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8080/healthz"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+volumes:
+  stalwart_data:
+
+networks:
+  shared-proxy:
+    external: true
+  mail-internal:
+    driver: bridge

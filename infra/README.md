@@ -129,6 +129,36 @@ On first run, it will:
 | `deploy-staging.yml` | Push to `main` | Self-hosted (staging) | Build & deploy to staging |
 | `deploy-production.yml` | New release | Self-hosted (staging) | Build, push & deploy to production |
 
+## Mail Server (Optional)
+
+Stalwart Mail Server can be optionally deployed alongside your Magento infrastructure to handle email sending/receiving for your domain.
+
+### How it works
+
+1. Set `mail.domain` in `infra/config.toml` (e.g., `mail.example.com`)
+2. Optionally set `mail.admin_email` for the Stalwart admin account
+3. Add `STALWART_ADMIN_PASSWORD` as a GitHub Secret
+4. Run the infrastructure workflow — mail provisioning happens automatically after server setup
+
+### What DNS records are auto-created
+
+| Record | Name | Value |
+|--------|------|-------|
+| A | `mail.example.com` | Server IP |
+| MX | `example.com` | `10 mail.example.com.` |
+| TXT (SPF) | `example.com` | `v=spf1 ip4:SERVER_IP -all` |
+| TXT (DMARC) | `_dmarc.example.com` | `v=DMARC1; p=reject; rua=mailto:postmaster@example.com` |
+| TXT (DKIM) | `*._domainkey.example.com` | Auto-extracted from Stalwart |
+| PTR | Server IP | `mail.example.com` |
+
+### Port 25 (SMTP)
+
+⚠️ **Manual step required:** Hetzner blocks outbound port 25 by default on all new servers. You must [contact Hetzner support](https://docs.hetzner.com/cloud/servers/faq/#why-can-i-not-send-any-mails-from-my-server) to request port 25 be unblocked for your server. This is a one-time request per server.
+
+### Stalwart Web UI
+
+After deployment, the Stalwart web admin interface is accessible at `https://mail.yourdomain.com`. Log in with the admin credentials to manage mailboxes, aliases, and view DKIM/DNS records.
+
 ## Cost Estimate
 
 - 2× CX23 (2 vCPU, 4 GB): ~€6.98/month (upgrade to CX33 or higher for production)

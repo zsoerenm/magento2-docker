@@ -199,6 +199,7 @@ services:
       - DOMAIN=${DOMAIN:-localhost}
     volumes:
       - ./docker/caddy/conf:/etc/caddy:ro
+      - ./docker/caddy/conf.d:/etc/caddy/conf.d:ro
       # Production: Let's Encrypt stores certificates here
       - caddy_data:/data
       - caddy_config:/config
@@ -207,6 +208,9 @@ services:
       - "80:80"
       - "443:443"
       - "443:443/udp"
+    networks:
+      - default
+      - shared-proxy
 
   autoheal:
     image: willfarrell/autoheal
@@ -223,3 +227,7 @@ volumes:
   opensearchdata:
   caddy_data:
   caddy_config:
+
+networks:
+  shared-proxy:
+    external: true

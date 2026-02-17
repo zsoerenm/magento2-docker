@@ -77,6 +77,11 @@ print(f'OPENSEARCH_PASSWORD={get("opensearch", "password")}')
 print(f'CADDY_EMAIL={get("tls", "certificate_email")}')
 print(f'DOMAIN={domain}')
 
+# Mail domain (from top-level [mail] section)
+mail_domain = config.get("mail", {}).get("domain", "")
+if mail_domain:
+    print(f'MAIL_DOMAIN={mail_domain}')
+
 # Staging access restriction
 staging_user = get("access", "username")
 staging_pass = get("access", "password")

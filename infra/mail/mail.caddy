@@ -1,0 +1,3 @@
+mail.{$DOMAIN} {
+    reverse_proxy stalwart:8080
+}

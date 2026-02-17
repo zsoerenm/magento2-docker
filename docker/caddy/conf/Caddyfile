@@ -5,6 +5,8 @@
   email {$CADDY_EMAIL}
 }
 
+import /etc/caddy/conf.d/*.caddy
+
 {$DOMAIN} {
   encode gzip
 
