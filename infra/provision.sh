@@ -325,9 +325,14 @@ EOF
     fi
   fi
 
+  # Mask password in GitHub Actions logs and export for workflow to save as secret
+  if [ -n "${GITHUB_ACTIONS:-}" ]; then
+    echo "::add-mask::$stalwart_admin_password"
+    echo "STALWART_ADMIN_PASSWORD=$stalwart_admin_password" >> "$GITHUB_OUTPUT"
+  fi
+
   log "Mail server setup complete for $mail_domain"
   log "Stalwart web UI: https://$mail_domain"
-  log "Admin password: $stalwart_admin_password"
   log "⚠️  Remember to contact Hetzner support to unblock port 25 for SMTP!"
 }
 
@@ -433,7 +438,10 @@ main() {
   for env in staging production; do
     ensure_server "$env"
     ensure_dns "$env"
-    ensure_mail "$env"
+    # Mail server only on production (not staging)
+    if [ "$env" = "production" ]; then
+      ensure_mail "$env"
+    fi
     push_nixos_config "$env"
     setup_github_runner "$env"
   done

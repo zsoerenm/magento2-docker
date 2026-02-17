@@ -111,3 +111,9 @@ jobs:
             set_secret "DEPLOY_SSH_PRIVATE_KEY" "$(cat /tmp/deploy_key)"
             echo "✅ DEPLOY_SSH_PRIVATE_KEY saved"
           fi
+
+          # Save Stalwart admin password if mail was provisioned
+          if [ -n "${STALWART_ADMIN_PASSWORD:-}" ]; then
+            set_secret "STALWART_ADMIN_PASSWORD" "$STALWART_ADMIN_PASSWORD"
+            echo "✅ STALWART_ADMIN_PASSWORD saved"
+          fi
