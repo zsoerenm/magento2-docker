@@ -8,6 +8,11 @@
 localhost, magento.local {
   import tls
 
+  # Mailpit web UI at /mailpit/
+  handle_path /mailpit/* {
+    reverse_proxy mailpit:8025
+  }
+
   # Reverse proxy all requests to Varnish
   # Varnish will handle caching and forward to the appropriate backend
   reverse_proxy varnish:80 {
