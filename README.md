@@ -970,18 +970,21 @@ docker compose exec php bash -c "cd app/design/frontend/Vendor/ThemeName/web/tai
 
 ### Additional Hyvä Setup
 
-After installation, Hyvä recommends:
+After installation, add these environment variables to your `docker-compose.override.yml` under the `php` service to apply the recommended Hyvä configuration:
 
-```bash
-# Disable legacy Magento captcha (use ReCaptcha instead)
-docker compose exec php bin/magento config:set customer/captcha/enable 0
-
-# Disable built-in minification/bundling (not needed with Hyvä)
-docker compose exec php bin/magento config:set dev/js/merge_files 0
-docker compose exec php bin/magento config:set dev/js/enable_js_bundling 0
-docker compose exec php bin/magento config:set dev/js/minify_files 0
-docker compose exec php bin/magento config:set dev/css/merge_css_files 0
-docker compose exec php bin/magento config:set dev/css/minify_files 0
+```yaml
+php:
+  environment:
+    # Disable legacy Magento captcha (use ReCaptcha instead)
+    - CONFIG__DEFAULT__CUSTOMER__CAPTCHA__ENABLE=0
+    # Disable built-in minification/bundling (not needed with Hyvä)
+    - CONFIG__DEFAULT__DEV__JS__MERGE_FILES=0
+    - CONFIG__DEFAULT__DEV__JS__ENABLE_JS_BUNDLING=0
+    - CONFIG__DEFAULT__DEV__JS__MINIFY_FILES=0
+    - CONFIG__DEFAULT__DEV__JS__MOVE_SCRIPT_TO_BOTTOM=0
+    - CONFIG__DEFAULT__DEV__CSS__MERGE_CSS_FILES=0
+    - CONFIG__DEFAULT__DEV__CSS__MINIFY_FILES=0
+    - CONFIG__DEFAULT__DEV__TEMPLATE__MINIFY_HTML=0
 ```
 
 See the [Hyvä documentation](https://docs.hyva.io/hyva-themes/getting-started/index.html) for the full setup guide.
