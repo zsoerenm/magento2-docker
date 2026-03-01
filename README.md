@@ -934,6 +934,58 @@ Deploy using quick strategy
 
 _Answer:_ Make sure you have run `app:config:dump scopes themes` (example: `docker-compose exec php bin/magento app:config:dump scopes themes`).
 
+## Hyvä Theme Support
+
+This setup includes Node.js in the PHP container to support frontend build tools like the [Hyvä theme](https://hyva.io)'s Tailwind CSS compiler.
+
+### Installing Hyvä
+
+Hyvä requires a free packagist.com key. Register at [hyva.io](https://hyva.io) and create a key from your account dashboard.
+
+```bash
+# Add your Hyvä packagist key
+docker compose exec php composer config --auth http-basic.hyva-themes.repo.packagist.com token yourLicenseKey
+docker compose exec php composer config repositories.private-packagist composer https://hyva-themes.repo.packagist.com/yourProjectName/
+
+# Install the theme
+docker compose run --rm composer require hyva-themes/magento2-default-theme
+docker compose exec php bin/magento setup:upgrade
+```
+
+Then activate the `hyva/default` theme in **Content → Design → Configuration**.
+
+### Building Tailwind CSS (Development)
+
+During development, run the Tailwind watcher from inside the PHP container:
+
+```bash
+docker compose exec php bash -c "cd app/design/frontend/Vendor/ThemeName/web/tailwind && npm ci && npm run watch"
+```
+
+For a one-time production build:
+
+```bash
+docker compose exec php bash -c "cd app/design/frontend/Vendor/ThemeName/web/tailwind && npm ci && npm run build"
+```
+
+### Additional Hyvä Setup
+
+After installation, Hyvä recommends:
+
+```bash
+# Disable legacy Magento captcha (use ReCaptcha instead)
+docker compose exec php bin/magento config:set customer/captcha/enable 0
+
+# Disable built-in minification/bundling (not needed with Hyvä)
+docker compose exec php bin/magento config:set dev/js/merge_files 0
+docker compose exec php bin/magento config:set dev/js/enable_js_bundling 0
+docker compose exec php bin/magento config:set dev/js/minify_files 0
+docker compose exec php bin/magento config:set dev/css/merge_css_files 0
+docker compose exec php bin/magento config:set dev/css/minify_files 0
+```
+
+See the [Hyvä documentation](https://docs.hyva.io/hyva-themes/getting-started/index.html) for the full setup guide.
+
 ## Todos
 
 - Add Let's encrypt example for production

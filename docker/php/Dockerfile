@@ -34,6 +34,10 @@ RUN /tmp/install-php-extensions.sh /tmp/composer.json \
 
 COPY --chmod=755 docker/php/docker-php-entrypoint /usr/local/bin/docker-php-entrypoint
 
+# Install Node.js for frontend build tools (e.g. Hyvä theme Tailwind CSS compilation)
+# Only needed during development and build — not required at runtime in production
+RUN apk add --no-cache nodejs npm
+
 USER $UID
 
 # The following image creates the production environment
