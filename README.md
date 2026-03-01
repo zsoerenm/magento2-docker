@@ -958,16 +958,13 @@ Then activate the `hyva/default` theme in **Content → Design → Configuration
 
 A `tailwind` helper script is included that automatically detects all installed themes with a Tailwind setup and runs `npm ci` + the appropriate build command.
 
-During development, start the watcher (auto-rebuilds on file changes):
+In **developer mode**, the Tailwind watcher starts automatically on container boot when Hyvä is detected — no manual steps needed.
+
+You can also run it manually:
 
 ```bash
-docker compose exec php tailwind watch
-```
-
-For a one-time production build:
-
-```bash
-docker compose exec php tailwind build
+docker compose exec php tailwind watch   # Watch mode (auto-rebuild on changes)
+docker compose exec php tailwind build   # One-time production build
 ```
 
 The script scans `app/design/frontend/` for custom themes containing a `web/tailwind/package.json`. Vendor themes ship pre-built CSS and don't need building.
