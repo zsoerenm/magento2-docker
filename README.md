@@ -944,8 +944,8 @@ Hyvä requires a free packagist.com key. Register at [hyva.io](https://hyva.io) 
 
 ```bash
 # Add your Hyvä packagist key
-docker compose exec php composer config --auth http-basic.hyva-themes.repo.packagist.com token yourLicenseKey
-docker compose exec php composer config repositories.private-packagist composer https://hyva-themes.repo.packagist.com/yourProjectName/
+docker compose run --rm composer config --auth http-basic.hyva-themes.repo.packagist.com token yourLicenseKey
+docker compose run --rm composer config repositories.private-packagist composer https://hyva-themes.repo.packagist.com/yourProjectName/
 
 # Install the theme
 docker compose run --rm composer require hyva-themes/magento2-default-theme
