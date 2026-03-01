@@ -9,6 +9,12 @@ services:
       target: magento2-php
     pull_policy: build
     image: magento2-php
+    environment:
+      # Override SMTP settings to route all mail through Mailpit
+      - CONFIG__DEFAULT__SYSTEM__SMTP__HOST=mailpit
+      - CONFIG__DEFAULT__SYSTEM__SMTP__PORT=1025
+      - CONFIG__DEFAULT__SYSTEM__SMTP__AUTH=none
+      - CONFIG__DEFAULT__SYSTEM__SMTP__SSL=
 
   web:
     build:
@@ -38,6 +44,20 @@ services:
       - ./docker/caddy/conf/Caddyfile.dev:/etc/caddy/Caddyfile:ro
       - ${CADDY_CERT_FILE:-./certs/cert.pem}:/certs/cert.pem:ro
       - ${CADDY_KEY_FILE:-./certs/key.pem}:/certs/key.pem:ro
+
+  mailpit:
+    image: axllent/mailpit:latest
+    restart: unless-stopped
+    environment:
+      # Use the same SMTP credentials Magento is configured with
+      - MP_SMTP_AUTH_ACCEPT_ANY=true
+      - MP_SMTP_AUTH_ALLOW_INSECURE=true
+      - MP_WEBROOT=mailpit
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8025/mailpit/livez"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
 
   autoheal:
     profiles:
