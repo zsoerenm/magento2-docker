@@ -49,6 +49,28 @@ else
     php bin/magento setup:install ${args}
 fi
 
+# Auto-detect Hyvä theme and disable legacy frontend optimization
+# Hyvä uses Tailwind CSS — Magento's built-in JS/CSS bundling/minification conflicts with it
+if php bin/magento module:status 2>/dev/null | grep -q "Hyva_Theme"; then
+    echo "🎨 Hyvä theme detected — disabling legacy JS/CSS bundling"
+    php bin/magento config:set dev/js/merge_files 0
+    php bin/magento config:set dev/js/enable_js_bundling 0
+    php bin/magento config:set dev/js/minify_files 0
+    php bin/magento config:set dev/js/move_script_to_bottom 0
+    php bin/magento config:set dev/css/merge_css_files 0
+    php bin/magento config:set dev/css/minify_files 0
+    php bin/magento config:set dev/template/minify_html 0
+    php bin/magento config:set customer/captcha/enable 0
+    php bin/magento cache:flush > /dev/null 2>&1
+
+    # Auto-start Tailwind watcher in the background (dev only)
+    deploy_mode=$(php bin/magento deploy:mode:show 2>/dev/null | grep -o "developer\|production" || echo "unknown")
+    if [ "$deploy_mode" = "developer" ] && command -v tailwind > /dev/null 2>&1; then
+        echo "👀 Starting Tailwind watcher in background..."
+        tailwind watch &
+    fi
+fi
+
 smtp_password="$CONFIG__DEFAULT__SYSTEM__SMTP__PASSWORD_UNENCRYPTED"
 if [[ ! -z "$CONFIG__DEFAULT__SYSTEM__SMTP__PASSWORD_UNENCRYPTED_FILE" && -f "$CONFIG__DEFAULT__SYSTEM__SMTP__PASSWORD_UNENCRYPTED_FILE" ]]; then
     smtp_password=$(cat "$CONFIG__DEFAULT__SYSTEM__SMTP__PASSWORD_UNENCRYPTED_FILE")

@@ -934,6 +934,49 @@ Deploy using quick strategy
 
 _Answer:_ Make sure you have run `app:config:dump scopes themes` (example: `docker-compose exec php bin/magento app:config:dump scopes themes`).
 
+## Hyvä Theme Support
+
+This setup includes Node.js in the PHP container to support frontend build tools like the [Hyvä theme](https://hyva.io)'s Tailwind CSS compiler.
+
+### Installing Hyvä
+
+Hyvä requires a free packagist.com key. Register at [hyva.io](https://hyva.io) and create a key from your account dashboard.
+
+```bash
+# Add your Hyvä packagist key
+docker compose run --rm composer config --auth http-basic.hyva-themes.repo.packagist.com token yourLicenseKey
+docker compose run --rm composer config repositories.private-packagist composer https://hyva-themes.repo.packagist.com/yourProjectName/
+
+# Install the theme
+docker compose run --rm composer require hyva-themes/magento2-default-theme
+docker compose exec php bin/magento setup:upgrade
+```
+
+Then activate the `hyva/default` theme in **Content → Design → Configuration**.
+
+### Building Tailwind CSS
+
+A `tailwind` helper script is included that automatically detects all installed themes with a Tailwind setup and runs `npm ci` + the appropriate build command.
+
+In **developer mode**, the Tailwind watcher starts automatically on container boot when Hyvä is detected — no manual steps needed.
+
+You can also run it manually:
+
+```bash
+docker compose exec php tailwind watch   # Watch mode (auto-rebuild on changes)
+docker compose exec php tailwind build   # One-time production build
+```
+
+The script scans `app/design/frontend/` for custom themes containing a `web/tailwind/package.json`. Vendor themes ship pre-built CSS and don't need building.
+
+### Automatic Configuration
+
+When the PHP container starts, it automatically detects if the `Hyva_Theme` module is installed and disables Magento's legacy JS/CSS bundling and minification (which conflicts with Hyvä's Tailwind CSS approach). This includes disabling JS merge/bundle/minify, CSS merge/minify, HTML minification, and legacy captcha.
+
+No manual configuration needed — just install the theme and restart the container.
+
+See the [Hyvä documentation](https://docs.hyva.io/hyva-themes/getting-started/index.html) for the full setup guide.
+
 ## Todos
 
 - Add Let's encrypt example for production
