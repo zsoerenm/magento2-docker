@@ -37,6 +37,14 @@ done < <(echo "$magento_help" | sed 's/^[ \t]*//' | tr -d '[' | grep -- "^--.*="
 if [ -e app/etc/env.php ]
 then
     php bin/magento setup:config:set ${args}
+
+    # Run database migrations if needed (e.g. after Magento version upgrade)
+    if ! php bin/magento setup:db:status > /dev/null 2>&1; then
+        echo "⚙️  Database schema is outdated — running setup:upgrade..."
+        php bin/magento setup:upgrade
+        php bin/magento cache:flush
+        echo "✅ Database upgrade complete"
+    fi
 else
     php bin/magento setup:install ${args}
 fi
