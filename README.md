@@ -972,24 +972,11 @@ docker compose exec php tailwind build
 
 The script scans `app/design/frontend/` for custom themes containing a `web/tailwind/package.json`. Vendor themes ship pre-built CSS and don't need building.
 
-### Additional Hyvä Setup
+### Automatic Configuration
 
-After installation, add these environment variables to your `docker-compose.override.yml` under the `php` service to apply the recommended Hyvä configuration:
+When the PHP container starts, it automatically detects if the `Hyva_Theme` module is installed and disables Magento's legacy JS/CSS bundling and minification (which conflicts with Hyvä's Tailwind CSS approach). This includes disabling JS merge/bundle/minify, CSS merge/minify, HTML minification, and legacy captcha.
 
-```yaml
-php:
-  environment:
-    # Disable legacy Magento captcha (use ReCaptcha instead)
-    - CONFIG__DEFAULT__CUSTOMER__CAPTCHA__ENABLE=0
-    # Disable built-in minification/bundling (not needed with Hyvä)
-    - CONFIG__DEFAULT__DEV__JS__MERGE_FILES=0
-    - CONFIG__DEFAULT__DEV__JS__ENABLE_JS_BUNDLING=0
-    - CONFIG__DEFAULT__DEV__JS__MINIFY_FILES=0
-    - CONFIG__DEFAULT__DEV__JS__MOVE_SCRIPT_TO_BOTTOM=0
-    - CONFIG__DEFAULT__DEV__CSS__MERGE_CSS_FILES=0
-    - CONFIG__DEFAULT__DEV__CSS__MINIFY_FILES=0
-    - CONFIG__DEFAULT__DEV__TEMPLATE__MINIFY_HTML=0
-```
+No manual configuration needed — just install the theme and restart the container.
 
 See the [Hyvä documentation](https://docs.hyva.io/hyva-themes/getting-started/index.html) for the full setup guide.
 
