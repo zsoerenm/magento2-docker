@@ -1,6 +1,7 @@
-certs/
+src/
+.env
 docker/secrets/
 backup.sql
 .worktrees/
-.env
 docker-compose.override.yml
+certs/

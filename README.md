@@ -970,7 +970,7 @@ For a one-time production build:
 docker compose exec php tailwind build
 ```
 
-The script scans `app/design/frontend/` and `vendor/hyva-themes/` for themes containing a `web/tailwind/package.json`.
+The script scans `app/design/frontend/` for custom themes containing a `web/tailwind/package.json`. Vendor themes ship pre-built CSS and don't need building.
 
 ### Additional Hyvä Setup
 

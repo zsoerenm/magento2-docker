@@ -1,11 +1,10 @@
 #!/bin/sh
 set -e
 
-# Find all Tailwind directories in installed themes
-# Supports both app/design themes and vendor themes
+# Find Tailwind directories in custom themes (app/design/frontend/)
+# Vendor themes (vendor/hyva-themes/) ship pre-built CSS and don't need building
 TAILWIND_DIRS=$(find \
-    app/design/frontend/*/Theme*/web/tailwind \
-    vendor/hyva-themes/*/web/tailwind \
+    app/design/frontend/*/*/web/tailwind \
     -maxdepth 0 -type d 2>/dev/null || true)
 
 if [ -z "$TAILWIND_DIRS" ]; then
