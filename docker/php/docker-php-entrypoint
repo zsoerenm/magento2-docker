@@ -62,6 +62,13 @@ if php bin/magento module:status 2>/dev/null | grep -q "Hyva_Theme"; then
     php bin/magento config:set dev/template/minify_html 0
     php bin/magento config:set customer/captcha/enable 0
     php bin/magento cache:flush > /dev/null 2>&1
+
+    # Auto-start Tailwind watcher in the background (dev only)
+    deploy_mode=$(php bin/magento deploy:mode:show 2>/dev/null | grep -o "developer\|production" || echo "unknown")
+    if [ "$deploy_mode" = "developer" ] && command -v tailwind > /dev/null 2>&1; then
+        echo "👀 Starting Tailwind watcher in background..."
+        tailwind watch &
+    fi
 fi
 
 smtp_password="$CONFIG__DEFAULT__SYSTEM__SMTP__PASSWORD_UNENCRYPTED"
