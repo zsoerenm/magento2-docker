@@ -954,19 +954,23 @@ docker compose exec php bin/magento setup:upgrade
 
 Then activate the `hyva/default` theme in **Content → Design → Configuration**.
 
-### Building Tailwind CSS (Development)
+### Building Tailwind CSS
 
-During development, run the Tailwind watcher from inside the PHP container:
+A `tailwind` helper script is included that automatically detects all installed themes with a Tailwind setup and runs `npm ci` + the appropriate build command.
+
+During development, start the watcher (auto-rebuilds on file changes):
 
 ```bash
-docker compose exec php bash -c "cd app/design/frontend/Vendor/ThemeName/web/tailwind && npm ci && npm run watch"
+docker compose exec php tailwind watch
 ```
 
 For a one-time production build:
 
 ```bash
-docker compose exec php bash -c "cd app/design/frontend/Vendor/ThemeName/web/tailwind && npm ci && npm run build"
+docker compose exec php tailwind build
 ```
+
+The script scans `app/design/frontend/` and `vendor/hyva-themes/` for themes containing a `web/tailwind/package.json`.
 
 ### Additional Hyvä Setup
 

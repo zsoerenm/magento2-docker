@@ -38,6 +38,8 @@ COPY --chmod=755 docker/php/docker-php-entrypoint /usr/local/bin/docker-php-entr
 # Only needed during development and build — not required at runtime in production
 RUN apk add --no-cache nodejs npm
 
+COPY --chmod=755 docker/php/tailwind.sh /usr/local/bin/tailwind
+
 USER $UID
 
 # The following image creates the production environment
