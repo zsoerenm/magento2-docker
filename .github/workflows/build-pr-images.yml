@@ -19,6 +19,14 @@ jobs:
     steps:
       - name: Checkout PR code
         uses: actions/checkout@v6
+        with:
+          clean: true
+
+      - name: Clean workspace
+        run: |
+          # Remove leftover files from previous runs (src/ is gitignored)
+          rm -rf src/vendor src/app/etc/config.php src/pub/index.php
+          echo "✅ Workspace cleaned"
 
       - name: Check if Magento source code is present
         id: check-source
