@@ -9,7 +9,7 @@ localhost, magento.local {
   import tls
 
   # Mailpit web UI at /mailpit/
-  handle_path /mailpit/* {
+  handle /mailpit/* {
     reverse_proxy mailpit:8025
   }
 

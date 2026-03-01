@@ -54,7 +54,7 @@ services:
       - MP_SMTP_AUTH_ALLOW_INSECURE=true
       - MP_WEBROOT=mailpit
     healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8025/livez"]
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8025/mailpit/livez"]
       interval: 30s
       timeout: 5s
       retries: 3
