@@ -6,7 +6,7 @@ services:
 
   php:
     build:
-      target: magento2-php
+      target: magento2-php-dev
     pull_policy: build
     image: magento2-php
     environment:
@@ -23,7 +23,7 @@ services:
 
   cron:
     build:
-      target: magento2-php  # Development: same as php service
+      target: magento2-php-dev  # Development: same as php service
     image: magento2-php
 
   composer:
