@@ -940,14 +940,30 @@ This setup includes Node.js in the PHP container to support frontend build tools
 
 ### Installing Hyvä
 
-Hyvä requires a free packagist.com key. Register at [hyva.io](https://hyva.io) and create a key from your account dashboard.
+#### Option A: Install from Hyvä Private Packagist (recommended)
+
+Register at [hyva.io](https://hyva.io) and create a free key from your account dashboard. This also gives access to compatibility modules.
 
 ```bash
-# Add your Hyvä packagist key
 docker compose run --rm composer config --auth http-basic.hyva-themes.repo.packagist.com token yourLicenseKey
 docker compose run --rm composer config repositories.private-packagist composer https://hyva-themes.repo.packagist.com/yourProjectName/
+docker compose run --rm composer require hyva-themes/magento2-default-theme
+```
 
-# Install the theme
+#### Option B: Install from GitHub
+
+No account needed — configure the required repositories directly:
+
+```bash
+docker compose run --rm composer config repositories.hyva-themes/magento2-theme-module git https://github.com/hyva-themes/magento2-theme-module.git
+docker compose run --rm composer config repositories.hyva-themes/magento2-default-theme git https://github.com/hyva-themes/magento2-default-theme.git
+docker compose run --rm composer config repositories.hyva-themes/magento2-default-theme-csp git https://github.com/hyva-themes/magento2-default-theme-csp.git
+docker compose run --rm composer config repositories.hyva-themes/magento2-base-layout-reset git https://github.com/hyva-themes/magento2-base-layout-reset.git
+docker compose run --rm composer config repositories.hyva-themes/magento2-compat-module-fallback git https://github.com/hyva-themes/magento2-compat-module-fallback.git
+docker compose run --rm composer config repositories.hyva-themes/magento2-luma-checkout git https://github.com/hyva-themes/magento2-luma-checkout.git
+docker compose run --rm composer config repositories.hyva-themes/magento2-theme-fallback git https://github.com/hyva-themes/magento2-theme-fallback.git
+docker compose run --rm composer config repositories.hyva-themes/magento2-order-cancellation-webapi git https://github.com/hyva-themes/magento2-order-cancellation-webapi.git
+docker compose run --rm composer config repositories.hyva-themes/magento2-email-module git https://github.com/hyva-themes/magento2-email-module.git
 docker compose run --rm composer require hyva-themes/magento2-default-theme
 docker compose exec php bin/magento setup:upgrade
 ```
