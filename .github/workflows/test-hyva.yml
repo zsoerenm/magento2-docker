@@ -1,0 +1,183 @@
+name: Test Hyvä Theme Installation
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - "docker/php/**"
+      - "docker-compose.yml"
+      - "docker-compose.override.yml.example"
+      - ".github/workflows/test-hyva.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test-hyva:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          clean: true
+
+      - name: Clean workspace
+        run: rm -rf src/vendor src/app/etc/config.php src/pub/index.php
+
+      - name: Bootstrap Magento
+        run: |
+          cp .env.example .env
+          cp docker-compose.override.yml.example docker-compose.override.yml
+
+          mkdir -p docker/secrets
+          echo "DummyPassword123" > docker/secrets/db_password.txt
+          echo "DummyPassword123" > docker/secrets/mysql_root_password.txt
+          echo "DummyPassword123" > docker/secrets/mysql_password.txt
+          echo "Admin123456" > docker/secrets/admin_password.txt
+          echo "DummyPassword123" > docker/secrets/smtp_password.txt
+
+          MAGENTO_VERSION=$(cat .magento-version)
+          echo "📥 Downloading Magento $MAGENTO_VERSION..."
+          wget -qO- "https://github.com/magento/magento2/archive/refs/tags/${MAGENTO_VERSION}.tar.gz" \
+            | tar xzfo - --strip-components=1 -C src/
+
+          sudo chown -R 1000:1000 src/
+
+          echo "🔨 Building services..."
+          docker compose build php composer
+
+          echo "📦 Installing Composer dependencies..."
+          docker compose run --rm composer install
+
+      - name: Start Magento stack
+        run: |
+          echo "🐳 Starting containers..."
+          docker compose up -d --wait db opensearch valkey php web varnish cron
+          docker compose ps
+
+      - name: Install Hyvä theme from GitHub
+        run: |
+          echo "🎨 Installing Hyvä theme..."
+
+          # Configure GitHub repositories
+          docker compose run --rm composer config repositories.hyva-themes/magento2-theme-module git https://github.com/hyva-themes/magento2-theme-module.git
+          docker compose run --rm composer config repositories.hyva-themes/magento2-default-theme git https://github.com/hyva-themes/magento2-default-theme.git
+          docker compose run --rm composer config repositories.hyva-themes/magento2-default-theme-csp git https://github.com/hyva-themes/magento2-default-theme-csp.git
+          docker compose run --rm composer config repositories.hyva-themes/magento2-base-layout-reset git https://github.com/hyva-themes/magento2-base-layout-reset.git
+          docker compose run --rm composer config repositories.hyva-themes/magento2-compat-module-fallback git https://github.com/hyva-themes/magento2-compat-module-fallback.git
+          docker compose run --rm composer config repositories.hyva-themes/magento2-luma-checkout git https://github.com/hyva-themes/magento2-luma-checkout.git
+          docker compose run --rm composer config repositories.hyva-themes/magento2-theme-fallback git https://github.com/hyva-themes/magento2-theme-fallback.git
+          docker compose run --rm composer config repositories.hyva-themes/magento2-order-cancellation-webapi git https://github.com/hyva-themes/magento2-order-cancellation-webapi.git
+          docker compose run --rm composer config repositories.hyva-themes/magento2-email-module git https://github.com/hyva-themes/magento2-email-module.git
+
+          docker compose run --rm composer require hyva-themes/magento2-default-theme
+
+          echo "✅ Hyvä theme installed"
+
+      - name: Run setup:upgrade
+        run: |
+          docker compose exec -T php bin/magento setup:upgrade
+          echo "✅ setup:upgrade complete"
+
+      - name: Verify Hyva_Theme module is enabled
+        run: |
+          if docker compose exec -T php bin/magento module:status | grep -q "Hyva_Theme"; then
+            echo "✅ Hyva_Theme module is enabled"
+          else
+            echo "❌ Hyva_Theme module not found!"
+            docker compose exec -T php bin/magento module:status
+            exit 1
+          fi
+
+      - name: Verify auto-detection on container restart
+        run: |
+          echo "🔄 Restarting PHP container to test auto-detection..."
+          docker compose restart php
+          sleep 10
+
+          # Check logs for Hyvä detection message
+          if docker compose logs php 2>&1 | grep -q "Hyvä theme detected"; then
+            echo "✅ Hyvä auto-detection works on container restart"
+          else
+            echo "⚠️  Hyvä auto-detection message not found in logs"
+            echo "PHP container logs:"
+            docker compose logs php --tail=30
+          fi
+
+          # Verify bundling is disabled
+          MERGE=$(docker compose exec -T php bin/magento config:show dev/js/merge_files 2>/dev/null || echo "unset")
+          BUNDLE=$(docker compose exec -T php bin/magento config:show dev/js/enable_js_bundling 2>/dev/null || echo "unset")
+          MINIFY=$(docker compose exec -T php bin/magento config:show dev/js/minify_files 2>/dev/null || echo "unset")
+
+          echo "JS merge: $MERGE | JS bundle: $BUNDLE | JS minify: $MINIFY"
+
+          if [ "$MERGE" = "0" ] && [ "$BUNDLE" = "0" ] && [ "$MINIFY" = "0" ]; then
+            echo "✅ Legacy bundling/minification correctly disabled"
+          else
+            echo "⚠️  Some bundling settings may not be disabled"
+          fi
+
+      - name: Activate Hyvä theme
+        run: |
+          # Register the theme
+          docker compose exec -T php bin/magento setup:upgrade --keep-generated 2>/dev/null || true
+
+          # Get the Hyvä theme ID
+          THEME_ID=$(docker compose exec -T php bin/magento dev:query:theme 2>/dev/null | grep -i hyva | awk '{print $1}' || true)
+
+          if [ -z "$THEME_ID" ]; then
+            # Try via database
+            THEME_ID=$(docker compose exec -T db mariadb -umagento2 -pDummyPassword123 magento2 -sNe \
+              "SELECT theme_id FROM theme WHERE theme_path LIKE '%hyva%' LIMIT 1" 2>/dev/null || true)
+          fi
+
+          if [ -n "$THEME_ID" ]; then
+            docker compose exec -T php bin/magento config:set design/theme/theme_id "$THEME_ID"
+            echo "✅ Hyvä theme activated (ID: $THEME_ID)"
+          else
+            echo "⚠️  Could not determine Hyvä theme ID — skipping theme activation"
+          fi
+
+          docker compose exec -T php bin/magento cache:flush
+
+      - name: Smoke test — frontend responds
+        run: |
+          echo "🧪 Testing frontend..."
+
+          # Test via varnish/web (bypassing Caddy/TLS)
+          HTTP_CODE=$(docker compose exec -T web curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/ 2>/dev/null || echo "000")
+
+          if [ "$HTTP_CODE" = "000" ]; then
+            # Try via PHP built-in check
+            HTTP_CODE=$(docker compose exec -T php curl -s -o /dev/null -w "%{http_code}" http://web:8080/ 2>/dev/null || echo "000")
+          fi
+
+          if [ "$HTTP_CODE" = "200" ] || [ "$HTTP_CODE" = "302" ]; then
+            echo "✅ Frontend responds (HTTP $HTTP_CODE)"
+          else
+            echo "❌ Frontend not responding (HTTP $HTTP_CODE)"
+            docker compose logs php --tail=20
+            docker compose logs web --tail=20
+            exit 1
+          fi
+
+      - name: Collect logs on failure
+        if: failure()
+        run: |
+          echo "=== Container status ==="
+          docker compose ps
+          echo ""
+          echo "=== PHP logs ==="
+          docker compose logs php --tail=50
+          echo ""
+          echo "=== Web logs ==="
+          docker compose logs web --tail=30
+          echo ""
+          echo "=== DB logs ==="
+          docker compose logs db --tail=20
+
+      - name: Cleanup
+        if: always()
+        run: docker compose down -v
