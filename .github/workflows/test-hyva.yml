@@ -61,9 +61,6 @@ jobs:
         run: |
           echo "🎨 Installing Hyvä theme..."
 
-          # Ensure composer cache directory exists with correct permissions
-          docker compose run --rm --entrypoint sh composer -c "mkdir -p /home/www-data/.composer/cache"
-
           # Configure GitHub repositories
           docker compose run --rm composer config repositories.hyva-themes/magento2-theme-module git https://github.com/hyva-themes/magento2-theme-module.git
           docker compose run --rm composer config repositories.hyva-themes/magento2-default-theme git https://github.com/hyva-themes/magento2-default-theme.git

@@ -7,6 +7,9 @@
 #   docker compose run --rm composer <command>
 FROM magento2-php
 
+# Set composer home to a writable location (www-data has no home directory)
+ENV COMPOSER_HOME=/tmp/.composer
+
 # renovate: datasource=docker depName=composer
 COPY --from=composer:2.8.12 /usr/bin/composer /usr/bin/composer
 
