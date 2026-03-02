@@ -10,6 +10,11 @@ FROM magento2-php
 # Set composer home to a writable location (www-data has no home directory)
 ENV COMPOSER_HOME=/tmp/.composer
 
+# Git is needed for installing packages from GitHub repositories (e.g. Hyvä theme)
+USER root
+RUN apk add --no-cache git
+USER www-data
+
 # renovate: datasource=docker depName=composer
 COPY --from=composer:2.8.12 /usr/bin/composer /usr/bin/composer
 
