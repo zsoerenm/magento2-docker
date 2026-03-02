@@ -34,24 +34,30 @@ RUN /tmp/install-php-extensions.sh /tmp/composer.json \
 
 COPY --chmod=755 docker/php/docker-php-entrypoint /usr/local/bin/docker-php-entrypoint
 
-# Install Node.js for frontend build tools (e.g. Hyvä theme Tailwind CSS compilation)
-# Only needed during development and build — not required at runtime in production
+USER $UID
+
+# Development image — adds Node.js for frontend build tools (e.g. Hyvä Tailwind CSS)
+FROM magento2-php AS magento2-php-dev
+
+USER root
+
 RUN apk add --no-cache nodejs npm
 
 COPY --chmod=755 docker/php/tailwind.sh /usr/local/bin/tailwind
 
 USER $UID
 
-# The following image creates the production environment
-FROM magento2-php
+# Build stage — has Node.js for Tailwind compilation
+FROM magento2-php-dev AS magento2-php-build
 
-# Copy the source code over the existing code.
 COPY --chown=www-data:www-data ./src .
 
 RUN set -ex; \
 	find var generated vendor pub/static pub/media app/etc -type f -exec chmod 644 {} + \
 	&& find var generated vendor pub/static pub/media app/etc -type d -exec chmod 755 {} + \
 	&& chmod u+x bin/magento \
+	# Build Tailwind CSS if any themes have it \
+	&& (tailwind build 2>/dev/null || true) \
 	&& php bin/magento setup:di:compile \
 	&& php bin/magento setup:static-content:deploy -f \
 	&& find \
@@ -65,6 +71,11 @@ RUN set -ex; \
 	var/view_preprocessed \
 	\( -type d -or -type f \) -exec chmod g-w {} \; \
 	&& chmod o-rwx app/etc/env.php
+
+# Production image — no Node.js, only compiled assets
+FROM magento2-php AS magento2-php-production
+
+COPY --from=magento2-php-build --chown=www-data:www-data /var/www/html /var/www/html
 
 COPY --chmod=755 docker/php/docker-php-entrypoint /usr/local/bin/base-docker-php-entrypoint
 COPY --chmod=755 docker/php/prod-docker-php-entrypoint /usr/local/bin/docker-php-entrypoint
