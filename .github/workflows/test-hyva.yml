@@ -17,8 +17,6 @@ jobs:
   test-hyva:
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    env:
-      HYVA_KEY: ${{ secrets.HYVA_PACKAGIST_KEY }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
@@ -59,37 +57,38 @@ jobs:
           docker compose up -d --wait db opensearch valkey php web varnish cron
           docker compose ps
 
-      - name: Install Hyvä theme
-        if: env.HYVA_KEY != ''
-        env:
-          HYVA_PACKAGIST_KEY: ${{ secrets.HYVA_PACKAGIST_KEY }}
-          HYVA_PROJECT_NAME: ${{ secrets.HYVA_PROJECT_NAME }}
+      - name: Install Hyvä theme from GitHub
         run: |
-          echo "🎨 Installing Hyvä theme via Packagist..."
+          echo "🎨 Installing Hyvä theme..."
 
-          docker compose run --rm composer config --auth http-basic.hyva-themes.repo.packagist.com token "$HYVA_PACKAGIST_KEY"
-          docker compose run --rm composer config repositories.private-packagist composer "https://hyva-themes.repo.packagist.com/${HYVA_PROJECT_NAME}/"
-          docker compose run --rm composer require hyva-themes/magento2-default-theme
+          # Configure all required GitHub repositories
+          repos=(
+            magento2-theme-module
+            magento2-default-theme
+            magento2-default-theme-csp
+            magento2-base-layout-reset
+            magento2-compat-module-fallback
+            magento2-luma-checkout
+            magento2-theme-fallback
+            magento2-order-cancellation-webapi
+            magento2-email-module
+            magento2-mollie-theme-bundle
+          )
+
+          for repo in "${repos[@]}"; do
+            docker compose run --rm composer config repositories.hyva-themes/$repo git https://github.com/hyva-themes/$repo.git
+          done
+
+          docker compose run --rm composer require "hyva-themes/magento2-default-theme:^1.3.21"
 
           echo "✅ Hyvä theme installed"
 
-      - name: Skip notice
-        if: env.HYVA_KEY == ''
-        env:
-          HYVA_PACKAGIST_KEY: ${{ secrets.HYVA_PACKAGIST_KEY }}
-        run: |
-          echo "⚠️  HYVA_PACKAGIST_KEY not set — skipping Hyvä test"
-          echo "   Add HYVA_PACKAGIST_KEY and HYVA_PROJECT_NAME secrets to enable this test"
-
       - name: Run setup:upgrade
-        if: env.HYVA_KEY != ''
- ${{ secrets.HYVA_PACKAGIST_KEY != '' }}
         run: |
           docker compose exec -T php bin/magento setup:upgrade
           echo "✅ setup:upgrade complete"
 
       - name: Verify Hyva_Theme module is enabled
-        if: env.HYVA_KEY != ''
         run: |
           if docker compose exec -T php bin/magento module:status | grep -q "Hyva_Theme"; then
             echo "✅ Hyva_Theme module is enabled"
@@ -100,7 +99,6 @@ jobs:
           fi
 
       - name: Verify auto-detection on container restart
-        if: env.HYVA_KEY != ''
         run: |
           echo "🔄 Restarting PHP container to test auto-detection..."
           docker compose restart php
@@ -129,7 +127,6 @@ jobs:
           fi
 
       - name: Activate Hyvä theme
-        if: env.HYVA_KEY != ''
         run: |
           # Register the theme
           docker compose exec -T php bin/magento setup:upgrade --keep-generated 2>/dev/null || true
@@ -153,7 +150,6 @@ jobs:
           docker compose exec -T php bin/magento cache:flush
 
       - name: Smoke test — frontend responds
-        if: env.HYVA_KEY != ''
         run: |
           echo "🧪 Testing frontend..."
 

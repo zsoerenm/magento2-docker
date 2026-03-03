@@ -940,12 +940,28 @@ This setup includes Node.js in the PHP container to support frontend build tools
 
 ### Installing Hyvä
 
-Hyvä requires a free Packagist key. Register at [hyva.io](https://hyva.io) and create a key from your account dashboard.
+#### Option A: Install from Hyvä Private Packagist (recommended)
+
+Register at [hyva.io](https://hyva.io) and create a free key from your account dashboard. This also gives access to compatibility modules.
 
 ```bash
 docker compose run --rm composer config --auth http-basic.hyva-themes.repo.packagist.com token yourLicenseKey
 docker compose run --rm composer config repositories.private-packagist composer https://hyva-themes.repo.packagist.com/yourProjectName/
 docker compose run --rm composer require hyva-themes/magento2-default-theme
+```
+
+#### Option B: Install from GitHub
+
+No account needed — configure the required repositories directly:
+
+```bash
+for repo in magento2-theme-module magento2-default-theme magento2-default-theme-csp \
+  magento2-base-layout-reset magento2-compat-module-fallback magento2-luma-checkout \
+  magento2-theme-fallback magento2-order-cancellation-webapi magento2-email-module \
+  magento2-mollie-theme-bundle; do
+  docker compose run --rm composer config repositories.hyva-themes/$repo git https://github.com/hyva-themes/$repo.git
+done
+docker compose run --rm composer require "hyva-themes/magento2-default-theme:^1.3.21"
 docker compose exec php bin/magento setup:upgrade
 ```
 
