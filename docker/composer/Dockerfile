@@ -7,7 +7,9 @@
 #   docker compose run --rm composer <command>
 FROM magento2-php
 
-# Set composer home to a writable location (www-data has no home directory)
+# Composer stores its cache (downloaded packages, cloned git repos) and auth.json
+# under COMPOSER_HOME, which defaults to $HOME/.composer. Since www-data has no
+# home directory, we point it to a writable location instead.
 ENV COMPOSER_HOME=/tmp/.composer
 
 # Git is needed for installing packages from GitHub repositories (e.g. Hyvä theme)
