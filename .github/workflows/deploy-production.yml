@@ -34,7 +34,16 @@ jobs:
             --exclude='docker/secrets' \
             "$GITHUB_WORKSPACE/" "$DEPLOY_DIR/"
 
+          if [ ! -f "src/pub/index.php" ]; then
+            MAGENTO_VERSION=$(cat .magento-version)
+            echo "📥 Downloading Magento $MAGENTO_VERSION..."
+            wget -qO- "https://github.com/magento/magento2/archive/refs/tags/${MAGENTO_VERSION}.tar.gz" \
+              | tar xzfo - --strip-components=1 -C src/
+          fi
+
           set -a && source .env && set +a
+          docker compose build composer
+          docker compose run --rm composer install --no-dev --optimize-autoloader
           docker compose build
 
       - name: Transfer images to production

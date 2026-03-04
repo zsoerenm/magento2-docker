@@ -39,6 +39,20 @@ jobs:
             --exclude='docker/secrets' \
             "$GITHUB_WORKSPACE/" "$DEPLOY_DIR/"
 
+      - name: Bootstrap Magento source
+        working-directory: /opt/magento2
+        run: |
+          if [ ! -f "src/pub/index.php" ]; then
+            MAGENTO_VERSION=$(cat .magento-version)
+            echo "📥 Downloading Magento $MAGENTO_VERSION..."
+            wget -qO- "https://github.com/magento/magento2/archive/refs/tags/${MAGENTO_VERSION}.tar.gz" \
+              | tar xzfo - --strip-components=1 -C src/
+          fi
+
+          set -a && source .env && set +a
+          docker compose build composer
+          docker compose run --rm composer install --no-dev --optimize-autoloader
+
       - name: Build Docker images
         working-directory: /opt/magento2
         run: |
