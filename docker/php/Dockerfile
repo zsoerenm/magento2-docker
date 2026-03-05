@@ -58,13 +58,14 @@ COPY --chown=www-data:www-data ./src .
 ENV COMPOSER_HOME=/tmp/.composer
 
 RUN set -ex; \
-	composer install --no-dev --optimize-autoloader --no-interaction \
-	&& find var generated vendor pub/static pub/media app/etc -type f -exec chmod 644 {} + \
-	&& find var generated vendor pub/static pub/media app/etc -type d -exec chmod 755 {} + \
+	composer install --no-dev --no-interaction \
+	&& find var vendor pub/static pub/media app/etc -type f -exec chmod 644 {} + \
+	&& find var vendor pub/static pub/media app/etc -type d -exec chmod 755 {} + \
 	&& chmod u+x bin/magento \
 	# Build Tailwind CSS if any themes have it \
 	&& (tailwind build 2>/dev/null || true) \
 	&& php bin/magento setup:di:compile \
+	&& composer dump-autoload --optimize --no-dev \
 	&& php bin/magento setup:static-content:deploy -f \
 	&& find \
 	app/code \
