@@ -41,8 +41,6 @@ jobs:
           fi
 
           set -a && source .env && set +a
-          docker compose build composer
-          docker compose run --rm composer install --no-dev --optimize-autoloader
           docker compose build
 
       - name: Transfer images to production
