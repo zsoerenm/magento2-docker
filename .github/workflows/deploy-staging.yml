@@ -39,18 +39,13 @@ jobs:
             --exclude='docker/secrets' \
             "$GITHUB_WORKSPACE/" "$DEPLOY_DIR/"
 
-      - name: Install dependencies
-        working-directory: /opt/magento2
+      - name: Verify Magento source
         run: |
-          if [ ! -f "src/composer.json" ]; then
+          if [ ! -f "$DEPLOY_DIR/src/composer.json" ]; then
             echo "❌ Magento source code not found in src/"
             echo "   Copy your Magento project into the src/ directory first."
             exit 1
           fi
-
-          set -a && source .env && set +a
-          docker compose build composer
-          docker compose run --rm composer install --no-dev --optimize-autoloader
 
       - name: Build Docker images
         working-directory: /opt/magento2

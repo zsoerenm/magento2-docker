@@ -47,13 +47,19 @@ COPY --chmod=755 docker/php/tailwind.sh /usr/local/bin/tailwind
 
 USER $UID
 
-# Build stage — has Node.js for Tailwind compilation
+# Build stage — installs dependencies, compiles DI and static content
 FROM magento2-php-dev AS magento2-php-build
+
+# renovate: datasource=docker depName=composer
+COPY --from=composer:2.8.12 /usr/bin/composer /usr/bin/composer
 
 COPY --chown=www-data:www-data ./src .
 
+ENV COMPOSER_HOME=/tmp/.composer
+
 RUN set -ex; \
-	find var generated vendor pub/static pub/media app/etc -type f -exec chmod 644 {} + \
+	composer install --no-dev --optimize-autoloader --no-interaction \
+	&& find var generated vendor pub/static pub/media app/etc -type f -exec chmod 644 {} + \
 	&& find var generated vendor pub/static pub/media app/etc -type d -exec chmod 755 {} + \
 	&& chmod u+x bin/magento \
 	# Build Tailwind CSS if any themes have it \
