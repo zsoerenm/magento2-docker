@@ -34,11 +34,10 @@ jobs:
             --exclude='docker/secrets' \
             "$GITHUB_WORKSPACE/" "$DEPLOY_DIR/"
 
-          if [ ! -f "src/pub/index.php" ]; then
-            MAGENTO_VERSION=$(cat .magento-version)
-            echo "📥 Downloading Magento $MAGENTO_VERSION..."
-            wget -qO- "https://github.com/magento/magento2/archive/refs/tags/${MAGENTO_VERSION}.tar.gz" \
-              | tar xzfo - --strip-components=1 -C src/
+          if [ ! -f "src/composer.json" ]; then
+            echo "❌ Magento source code not found in src/"
+            echo "   Copy your Magento project into the src/ directory first."
+            exit 1
           fi
 
           set -a && source .env && set +a
