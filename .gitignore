@@ -1,5 +1,8 @@
-src/*
-!src/README.md
+src/vendor/
+src/generated/
+src/var/
+src/pub/static/
+src/pub/media/
 .env
 docker/secrets/
 backup.sql
