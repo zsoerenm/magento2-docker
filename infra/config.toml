@@ -5,6 +5,11 @@
 #
 # Staging inherits all values from production unless overridden.
 
+# ─── Hetzner Cloud ────────────────────────────────────────────────────────────
+
+[hetzner]
+ssh_key_name = "magento2-deploy"
+
 # ─── Server Infrastructure ───────────────────────────────────────────────────
 
 [servers.production]
@@ -13,12 +18,14 @@
 # See https://www.hetzner.com/cloud for current plans.
 server_type = "cx23"
 location = "fsn1"            # Hetzner location (fsn1 = Falkenstein, Germany)
+hostname = "magento2-production"
 domain = "shop.example.com"
 github_runner = false
 
 [servers.staging]
 server_type = "cx23"
 location = "fsn1"
+hostname = "magento2-staging"
 domain = "staging.example.com"
 github_runner = true
 

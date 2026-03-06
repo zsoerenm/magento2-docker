@@ -8,6 +8,7 @@ let
 in
 {
   imports = [
+    ./hardware-configuration.nix
   ];
 
   # System

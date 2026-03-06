@@ -34,13 +34,16 @@ jobs:
           echo "DEPLOY_SSH_PRIVKEY_PATH=/tmp/deploy_key" >> $GITHUB_ENV
 
       - name: Load existing SSH key from secrets
-        if: ${{ secrets.DEPLOY_SSH_PRIVATE_KEY != '' }}
+        env:
+          SSH_KEY: ${{ secrets.DEPLOY_SSH_PRIVATE_KEY }}
         run: |
-          echo "${{ secrets.DEPLOY_SSH_PRIVATE_KEY }}" > /tmp/deploy_key
-          chmod 600 /tmp/deploy_key
-          ssh-keygen -y -f /tmp/deploy_key > /tmp/deploy_key.pub
-          echo "DEPLOY_SSH_PUBKEY=$(cat /tmp/deploy_key.pub)" >> $GITHUB_ENV
-          touch /tmp/deploy_key_existed
+          if [ -n "$SSH_KEY" ]; then
+            echo "$SSH_KEY" > /tmp/deploy_key
+            chmod 600 /tmp/deploy_key
+            ssh-keygen -y -f /tmp/deploy_key > /tmp/deploy_key.pub
+            echo "DEPLOY_SSH_PUBKEY=$(cat /tmp/deploy_key.pub)" >> $GITHUB_ENV
+            touch /tmp/deploy_key_existed
+          fi
 
       - name: Get GitHub Actions runner registration token
         id: runner-token
