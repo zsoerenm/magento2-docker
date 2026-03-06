@@ -1,0 +1,26 @@
+<?xml version="1.0"?>
+<!--
+/**
+ * Copyright 2014 Adobe
+ * All Rights Reserved.
+ */
+-->
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:framework:ObjectManager/etc/config.xsd">
+    <type name="Magento\Quote\Model\GuestCart\GuestCartManagement">
+        <plugin name="authorization" type="Magento\Quote\Model\GuestCartManagement\Plugin\Authorization" />
+    </type>
+    <type name="Magento\Quote\Model\QuoteRepository">
+        <plugin name="accessControl" type="Magento\Quote\Model\QuoteRepository\Plugin\AccessChangeQuoteControl" />
+        <plugin name="authorization" type="Magento\Quote\Model\QuoteRepository\Plugin\Authorization" />
+    </type>
+    <type name="Magento\Quote\Api\GuestCartItemRepositoryInterface">
+        <plugin name="updateCartIdFromRequest" type="Magento\Quote\Plugin\UpdateCartId" />
+    </type>
+    <type name="Magento\Quote\Model\Quote">
+        <plugin name="updateQuoteStoreId" type="Magento\Quote\Model\Quote\Plugin\UpdateQuoteStoreId" />
+        <plugin name="validateQuoteAddress" type="Magento\Quote\Plugin\QuoteAddress" />
+    </type>
+    <type name="Magento\Quote\Model\QuoteValidator">
+        <plugin name="error_redirect_processor" type="Magento\Quote\Plugin\Webapi\Model\ErrorRedirectProcessor" />
+    </type>
+</config>
