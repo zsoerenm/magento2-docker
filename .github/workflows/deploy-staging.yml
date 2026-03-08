@@ -35,6 +35,7 @@ jobs:
         run: |
           rsync -a --delete \
             --exclude='.git' \
+            --exclude='docker-compose.override.yml' \
             --exclude='.env' \
             --exclude='docker/secrets' \
             "$GITHUB_WORKSPACE/" "$DEPLOY_DIR/"
@@ -48,27 +49,43 @@ jobs:
           fi
 
       - name: Build Docker images
+        env:
+          COMPOSER_AUTH: '{"github-oauth":{"github.com":"${{ secrets.GH_PAT }}"}}'
         working-directory: /opt/magento2
-        run: |
-          set -a && source .env && set +a
-          docker compose build
+        run: docker compose build --build-arg COMPOSER_AUTH="$COMPOSER_AUTH"
 
       - name: Deploy
         working-directory: /opt/magento2
+        timeout-minutes: 60
         run: |
-          set -a && source .env && set +a
+          # Stop existing containers and remove old state for fresh install
+          docker compose down -v 2>/dev/null || true
+
           docker compose up -d
 
-          echo "Waiting for services to become healthy..."
-          for i in $(seq 1 60); do
-            if docker compose ps | grep -q "unhealthy"; then
-              sleep 5
-            else
-              echo "All services healthy!"
+          echo "Waiting for services to start (max 10 min)..."
+          for i in $(seq 1 120); do
+            # Check if PHP is running (not restarting)
+            php_status=$(docker compose ps php --format json 2>/dev/null | head -1)
+            if echo "$php_status" | grep -q '"running"'; then
+              echo "✅ PHP container is running"
               docker compose ps
               exit 0
             fi
+            if echo "$php_status" | grep -q '"exited"'; then
+              echo "❌ PHP container exited"
+              docker compose logs php --tail=50
+              exit 1
+            fi
+            sleep 5
           done
 
-          echo "WARNING: Some services may not be healthy yet"
+          echo "⏰ Timeout waiting for services"
           docker compose ps
+          docker compose logs php --tail=50
+          exit 1
+
+      - name: Show PHP container logs
+        if: always()
+        working-directory: /opt/magento2
+        run: docker compose logs php --tail=100

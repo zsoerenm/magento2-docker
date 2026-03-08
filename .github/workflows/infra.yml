@@ -34,13 +34,16 @@ jobs:
           echo "DEPLOY_SSH_PRIVKEY_PATH=/tmp/deploy_key" >> $GITHUB_ENV
 
       - name: Load existing SSH key from secrets
-        if: ${{ secrets.DEPLOY_SSH_PRIVATE_KEY != '' }}
+        env:
+          SSH_KEY: ${{ secrets.DEPLOY_SSH_PRIVATE_KEY }}
         run: |
-          echo "${{ secrets.DEPLOY_SSH_PRIVATE_KEY }}" > /tmp/deploy_key
-          chmod 600 /tmp/deploy_key
-          ssh-keygen -y -f /tmp/deploy_key > /tmp/deploy_key.pub
-          echo "DEPLOY_SSH_PUBKEY=$(cat /tmp/deploy_key.pub)" >> $GITHUB_ENV
-          touch /tmp/deploy_key_existed
+          if [ -n "$SSH_KEY" ]; then
+            echo "$SSH_KEY" > /tmp/deploy_key
+            chmod 600 /tmp/deploy_key
+            ssh-keygen -y -f /tmp/deploy_key > /tmp/deploy_key.pub
+            echo "DEPLOY_SSH_PUBKEY=$(cat /tmp/deploy_key.pub)" >> $GITHUB_ENV
+            touch /tmp/deploy_key_existed
+          fi
 
       - name: Get GitHub Actions runner registration token
         id: runner-token
@@ -74,12 +77,13 @@ jobs:
             PUB_KEY=$(jq -r '.key' /tmp/pub_key.json)
 
             # Encrypt the secret value using libsodium sealed box
-            ENCRYPTED=$(python3 -c "
+            ENCRYPTED=$(SECRET_VALUE="$value" python3 -c "
+          import os
           from base64 import b64encode, b64decode
           from nacl.public import SealedBox, PublicKey
           public_key = b64decode('$PUB_KEY')
           sealed_box = SealedBox(PublicKey(public_key))
-          encrypted = sealed_box.encrypt(b'''$value''')
+          encrypted = sealed_box.encrypt(os.environ['SECRET_VALUE'].encode())
           print(b64encode(encrypted).decode())
           ")
 
@@ -92,22 +96,25 @@ jobs:
 
           pip install pynacl -q
 
+          # Read server names from config.toml
+          cfg_get() { python3 -c "import tomllib; c=open('infra/config.toml','rb'); print(tomllib.load(c).get('servers',{}).get('$1',{}).get('$2',''))"; }
+          PROD_NAME="magento2-$(python3 -c "import tomllib; print(tomllib.load(open('infra/config.toml','rb')).get('servers',{}).get('production',{}).get('hostname',''))")"
+          STAGING_NAME="magento2-$(python3 -c "import tomllib; print(tomllib.load(open('infra/config.toml','rb')).get('servers',{}).get('staging',{}).get('hostname',''))")"
+
           # Save production host IP
-          PROD_IP=$(hcloud server ip magento2-production 2>/dev/null || echo "")
+          PROD_IP=$(hcloud server ip "$PROD_NAME" 2>/dev/null || echo "")
           if [ -n "$PROD_IP" ]; then
             set_secret "PRODUCTION_HOST" "$PROD_IP"
             echo "✅ PRODUCTION_HOST set to $PROD_IP"
           fi
 
           # Save staging host IP
-          STAGING_IP=$(hcloud server ip magento2-staging 2>/dev/null || echo "")
+          STAGING_IP=$(hcloud server ip "$STAGING_NAME" 2>/dev/null || echo "")
           if [ -n "$STAGING_IP" ]; then
             set_secret "STAGING_HOST" "$STAGING_IP"
             echo "✅ STAGING_HOST set to $STAGING_IP"
           fi
 
-          # Save SSH key on first run
-          if [ ! -f /tmp/deploy_key_existed ]; then
-            set_secret "DEPLOY_SSH_PRIVATE_KEY" "$(cat /tmp/deploy_key)"
-            echo "✅ DEPLOY_SSH_PRIVATE_KEY saved"
-          fi
+          # Always save SSH key
+          set_secret "DEPLOY_SSH_PRIVATE_KEY" "$(cat /tmp/deploy_key)"
+          echo "✅ DEPLOY_SSH_PRIVATE_KEY saved"

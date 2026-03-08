@@ -8,6 +8,7 @@ let
 in
 {
   imports = [
+    ./hardware-configuration.nix
   ];
 
   # System
@@ -51,6 +52,11 @@ in
     curl
     jq
     vim
+  ];
+
+  # Root SSH access for deployment
+  users.users.root.openssh.authorizedKeys.keys = [
+    # Will be populated by the infra workflow
   ];
 
   # Deploy user
