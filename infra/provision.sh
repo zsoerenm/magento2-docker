@@ -41,12 +41,19 @@ ensure_ssh_key() {
   log "Ensuring SSH key '$key_name' exists in Hetzner Cloud..."
 
   if hcloud ssh-key describe "$key_name" &>/dev/null; then
-    log "SSH key already exists, updating..."
-    hcloud ssh-key update "$key_name" --public-key "$DEPLOY_SSH_PUBKEY" 2>/dev/null || true
-  else
-    log "Creating SSH key..."
-    hcloud ssh-key create --name "$key_name" --public-key "$DEPLOY_SSH_PUBKEY"
+    local existing_key
+    existing_key=$(hcloud ssh-key describe "$key_name" -o json | jq -r '.public_key')
+    if [ "$existing_key" = "$DEPLOY_SSH_PUBKEY" ]; then
+      log "SSH key '$key_name' already matches, skipping."
+      return
+    fi
+    # hcloud ssh-key update cannot change the public key, only labels.
+    # Delete and recreate to ensure the key matches the current deploy key.
+    log "SSH key already exists with different pubkey, replacing..."
+    hcloud ssh-key delete "$key_name"
   fi
+  log "Creating SSH key..."
+  hcloud ssh-key create --name "$key_name" --public-key "$DEPLOY_SSH_PUBKEY"
 }
 
 ###############################################################################
@@ -101,10 +108,18 @@ ensure_server() {
     done
 
     log "Installing NixOS via nixos-infect..."
+    # nixos-infect reboots the server at the end, which kills the SSH session.
+    # We use nohup + background to let it run independently, then wait for reboot.
     ssh -o StrictHostKeyChecking=no -i "$DEPLOY_SSH_PRIVKEY_PATH" root@"$ip" bash <<'INFECT'
-      curl -L https://raw.githubusercontent.com/elitak/nixos-infect/master/nixos-infect | \
-        NIX_CHANNEL=nixos-24.11 bash -x 2>&1 | tail -20
+      curl -L https://raw.githubusercontent.com/elitak/nixos-infect/master/nixos-infect -o /tmp/nixos-infect
+      # Workaround: on BIOS systems, $bootFs is unset causing "mv/cp .bak" to fail.
+      # Prepend bootFs=/boot as a safe default for non-EFI systems.
+      sed -i 's|rm -rf $bootFs.bak|bootFs="${bootFs:-/boot}"; rm -rf $bootFs.bak|' /tmp/nixos-infect
+      nohup bash -c 'NIX_CHANNEL=nixos-24.11 bash /tmp/nixos-infect 2>&1 | tee /tmp/nixos-infect.log' &>/dev/null &
 INFECT
+    # Wait for nixos-infect to finish and reboot the server
+    log "Waiting for nixos-infect to complete (this takes ~5 minutes)..."
+    sleep 300
 
     log "Waiting for reboot after nixos-infect..."
     sleep 30
@@ -143,38 +158,38 @@ ensure_dns() {
 
   log "Setting up DNS: $domain -> $ip"
 
-  # Get zone ID via Cloud API
-  local zone_id
-  zone_id=$(curl -s -H "Authorization: Bearer $HCLOUD_TOKEN" \
-    "https://api.hetzner.cloud/v1/zones" | \
-    jq -r ".zones[] | select(.name == \"$zone_name\") | .id")
-
-  if [ -z "$zone_id" ]; then
-    err "DNS zone '$zone_name' not found. Create it in Hetzner Console → project → DNS first."
+  # Ensure DNS zone exists (create if needed)
+  if ! hcloud dns zone describe "$zone_name" &>/dev/null; then
+    log "DNS zone '$zone_name' not found, creating..."
+    if ! hcloud dns zone create --name "$zone_name" 2>&1; then
+      log "WARNING: Failed to create DNS zone '$zone_name'. Set A record manually: $domain -> $ip"
+      return
+    fi
+    log "DNS zone '$zone_name' created."
   fi
 
   # Extract record name (subdomain part)
-  local record_name="${domain%%.$zone_name}"
+  # For apex domain (domain == zone), use "@"; otherwise strip zone suffix
+  local record_name
+  if [ "$domain" = "$zone_name" ]; then
+    record_name="@"
+  else
+    record_name="${domain%%.$zone_name}"
+  fi
 
-  # Upsert A record via Cloud API RRset endpoint
-  log "Setting DNS record: $record_name.$zone_name -> $ip"
-  local response
-  response=$(curl -s -w "\n%{http_code}" -X PUT \
-    -H "Authorization: Bearer $HCLOUD_TOKEN" \
-    -H "Content-Type: application/json" \
-    -d "$(jq -n --arg ip "$ip" '{ttl: 300, records: [{value: $ip}]}')" \
-    "https://api.hetzner.cloud/v1/zones/$zone_id/rrsets/$record_name/A")
-
-  local http_code
-  http_code=$(echo "$response" | tail -1)
-  if [ "$http_code" -ge 200 ] && [ "$http_code" -lt 300 ]; then
+  # Create or update A record via hcloud CLI
+  log "Setting DNS record: $record_name -> $ip"
+  if hcloud dns rrset describe "$zone_name" "$record_name" A &>/dev/null; then
+    # RRset exists — delete and recreate (hcloud has no upsert)
+    log "Existing A record found, deleting..."
+    hcloud dns rrset delete "$zone_name" "$record_name" A 2>&1 || true
+  fi
+  if hcloud dns rrset create "$zone_name" --name "$record_name" --type A --record "$ip" --ttl 300 2>&1; then
     log "DNS record set: $domain -> $ip"
   else
-    log "WARNING: DNS update failed (HTTP $http_code). Set A record manually: $domain -> $ip"
-    log "Response: $(echo "$response" | head -1)"
+    log "WARNING: DNS update failed. Set A record manually: $domain -> $ip"
   fi
 }
-
 ###############################################################################
 # NixOS configuration push
 ###############################################################################
@@ -186,12 +201,22 @@ push_nixos_config() {
 
   log "Pushing NixOS configuration to $env ($ip)..."
 
-  # Copy NixOS config to server
-  scp -o StrictHostKeyChecking=no -i "$DEPLOY_SSH_PRIVKEY_PATH" -r \
-    "$SCRIPT_DIR/nixos/"* root@"$ip":/etc/nixos/
+  # Inject deploy SSH public key into NixOS config before uploading
+  local tmp_nixos
+  tmp_nixos=$(mktemp -d)
+  cp -r "$SCRIPT_DIR/nixos/"* "$tmp_nixos/"
+  sed -i "s|# Will be populated by the infra workflow|\"$DEPLOY_SSH_PUBKEY\"|g" "$tmp_nixos/configuration.nix"
+  log "Injected SSH key into NixOS config"
 
-  # Set the server role and rebuild
-  ssh -o StrictHostKeyChecking=no -i "$DEPLOY_SSH_PRIVKEY_PATH" root@"$ip" bash <<EOF
+  # Copy NixOS config to server
+  ssh -o StrictHostKeyChecking=no -i "$DEPLOY_SSH_PRIVKEY_PATH" root@"$ip" "mkdir -p /etc/nixos"
+  scp -o StrictHostKeyChecking=no -i "$DEPLOY_SSH_PRIVKEY_PATH" -r \
+    "$tmp_nixos/"* root@"$ip":/etc/nixos/
+  rm -rf "$tmp_nixos"
+
+  # Rebuild NixOS
+  ssh -o StrictHostKeyChecking=no -i "$DEPLOY_SSH_PRIVKEY_PATH" root@"$ip" <<EOF
+    export PATH=/run/current-system/sw/bin:\$PATH
     export SERVER_ROLE=$env
     cd /etc/nixos
     nixos-rebuild switch 2>&1 | tail -20
@@ -219,6 +244,8 @@ setup_github_runner() {
   log "Setting up GitHub Actions runner on $env ($ip)..."
 
   ssh -o StrictHostKeyChecking=no -i "$DEPLOY_SSH_PRIVKEY_PATH" root@"$ip" bash <<'RUNNER'
+    export PATH=/run/current-system/sw/bin:/nix/var/nix/profiles/default/bin:$PATH
+
     # Create runner user if not exists
     id -u runner &>/dev/null || useradd -m -s /bin/bash runner
     usermod -aG docker runner
@@ -244,7 +271,7 @@ setup_github_runner() {
 RUNNER
 
   # If we have a runner token, register it
-  if [ -n "${GITHUB_RUNNER_TOKEN:-}" ]; then
+  if [ -n "${GITHUB_RUNNER_TOKEN:-}" ] && [ "${GITHUB_RUNNER_TOKEN}" != "null" ]; then
     ssh -o StrictHostKeyChecking=no -i "$DEPLOY_SSH_PRIVKEY_PATH" root@"$ip" bash <<EOF
       cd /home/runner/actions-runner
       sudo -u runner ./config.sh \
@@ -278,7 +305,7 @@ main() {
     ensure_server "$env"
     ensure_dns "$env"
     push_nixos_config "$env"
-    setup_github_runner "$env"
+    setup_github_runner "$env" || log "WARNING: Runner setup failed for $env (non-fatal)"
   done
 
   log "Infrastructure provisioning complete!"

@@ -28,6 +28,7 @@ services:
         condition: service_started
     volumes:
       - "${DOCKER_MAGENTO_VOLUME:-mediadata:/var/www/html/pub/media}"
+      - staticdata:/var/www/html/pub/static
     secrets:
       - db_password
       - admin_password
@@ -61,8 +62,8 @@ services:
       # add a /etc/hosts entry like
       # 127.0.0.1   magento.local
       - CONFIG__DEFAULT__WEB__SECURE__ENABLE_HSTS=1
-      - CONFIG__DEFAULT__WEB__UNSECURE__BASE_URL=http://magento.local
-      - CONFIG__DEFAULT__WEB__SECURE__BASE_URL=https://magento.local
+      - CONFIG__DEFAULT__WEB__UNSECURE__BASE_URL=https://${DOMAIN:-magento.local}/
+      - CONFIG__DEFAULT__WEB__SECURE__BASE_URL=https://${DOMAIN:-magento.local}/
       - SEARCH_ENGINE=opensearch
       - OPENSEARCH_HOST=opensearch
       - OPENSEARCH_ENABLE_AUTH=true
@@ -149,6 +150,7 @@ services:
       retries: 3
     volumes:
       - "${DOCKER_MAGENTO_VOLUME:-mediadata:/var/www/html/pub/media:ro}"
+      - staticdata:/var/www/html/pub/static:ro
     environment:
       - BACKEND_HOST=php
       - SERVER_NAME=web
@@ -219,6 +221,7 @@ services:
 volumes:
   dbdata:
   mediadata:
+  staticdata:
   configdata:
   opensearchdata:
   caddy_data:

@@ -6,7 +6,7 @@ services:
 
   php:
     build:
-      target: magento2-php-dev
+      target: magento2-php
     pull_policy: build
     image: magento2-php
     environment:
@@ -15,6 +15,8 @@ services:
       - CONFIG__DEFAULT__SYSTEM__SMTP__PORT=1025
       - CONFIG__DEFAULT__SYSTEM__SMTP__AUTH=none
       - CONFIG__DEFAULT__SYSTEM__SMTP__SSL=
+      - CONFIG__DEFAULT__WEB__UNSECURE__BASE_URL=http://magento.local/
+      - CONFIG__DEFAULT__WEB__SECURE__BASE_URL=http://magento.local/
 
   web:
     build:
@@ -23,7 +25,7 @@ services:
 
   cron:
     build:
-      target: magento2-php-dev  # Development: same as php service
+      target: magento2-php  # Development: same as php service
     image: magento2-php
 
   composer:
@@ -54,7 +56,7 @@ services:
       - MP_SMTP_AUTH_ALLOW_INSECURE=true
       - MP_WEBROOT=mailpit
     healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8025/mailpit/livez"]
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8025/livez"]
       interval: 30s
       timeout: 5s
       retries: 3

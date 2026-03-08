@@ -5,6 +5,11 @@
 #
 # Staging inherits all values from production unless overridden.
 
+# ─── Hetzner Cloud ────────────────────────────────────────────────────────────
+
+[hetzner]
+ssh_key_name = "magento2-deploy"
+
 # ─── Server Infrastructure ───────────────────────────────────────────────────
 
 [servers.production]
@@ -13,13 +18,15 @@
 # See https://www.hetzner.com/cloud for current plans.
 server_type = "cx23"
 location = "fsn1"            # Hetzner location (fsn1 = Falkenstein, Germany)
+hostname = "myshop-production"
 domain = "shop.example.com"
 github_runner = false
 
 [servers.staging]
 server_type = "cx23"
 location = "fsn1"
-domain = "staging.example.com"
+hostname = "myshop-staging"
+domain = "staging.shop.example.com"
 github_runner = true
 
 # ─── DNS ──────────────────────────────────────────────────────────────────────
@@ -35,8 +42,8 @@ zone = "example.com"
 # Use a random string to prevent brute-force attacks on the login page.
 admin_url_path = "admin_x7k9m"
 email = "admin@example.com"
-firstname = "John"
-lastname = "Doe"
+firstname = "Admin"
+lastname = "User"
 password = "${ADMIN_PASSWORD}"       # GitHub Secret
 
 [staging.admin]
@@ -59,8 +66,15 @@ smtp_encryption = "tls"              # "tls" or "ssl"
 smtp_authentication = "login"        # "login", "plain", or "none"
 
 [staging.email]
-# Inherits from production. Override only what differs:
-# sender_name = "My Store (Staging)"
+# Override for staging: use Mailpit to catch all emails locally
+# Access at https://staging.shop.example.com/mailpit/
+sender_name = "My Store (Staging)"
+smtp_host = "mailpit"
+smtp_port = 1025
+smtp_username = ""
+smtp_password = ""
+smtp_encryption = ""
+smtp_authentication = "none"
 
 # ─── Database ─────────────────────────────────────────────────────────────────
 
