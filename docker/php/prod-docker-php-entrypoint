@@ -1,13 +1,22 @@
 #!/bin/sh
 set -e
 
+# Always clear generated code and reset autoloader
+# Build-time di:compile creates stale class references without env.php
+rm -rf generated/code/* generated/metadata/*
+composer dump-autoload --no-dev 2>/dev/null || true
+
+# Run the base entrypoint (handles setup:install or setup:config:set)
 /usr/local/bin/base-docker-php-entrypoint
 
 if [ ! -z "$DB_HOST" ]; then
     php bin/magento maintenance:enable
     php bin/magento deploy:mode:set production --skip-compilation
-    php bin/magento app:config:import
-    php bin/magento setup:upgrade --keep-generated
+    php bin/magento app:config:import 2>/dev/null || true
+    php bin/magento setup:upgrade
+    php bin/magento setup:di:compile
+    composer dump-autoload --optimize --no-dev
+    php bin/magento setup:static-content:deploy -f
     php bin/magento cache:flush
     php bin/magento maintenance:disable
 fi

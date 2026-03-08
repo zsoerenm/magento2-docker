@@ -50,6 +50,11 @@ USER $UID
 # Build stage — installs dependencies, compiles DI and static content
 FROM magento2-php-dev AS magento2-php-build
 
+# git is needed for composer source installs (e.g. Hyvä private repos)
+USER root
+RUN apk add --no-cache git
+USER www-data
+
 # renovate: datasource=docker depName=composer
 COPY --from=composer:2.8.12 /usr/bin/composer /usr/bin/composer
 
@@ -57,32 +62,30 @@ COPY --chown=www-data:www-data ./src .
 
 ENV COMPOSER_HOME=/tmp/.composer
 
+# GitHub token for private repos (Hyvä theme etc.) — passed as build arg, not persisted in image
+ARG COMPOSER_AUTH
+ENV COMPOSER_AUTH=${COMPOSER_AUTH}
+
 RUN set -ex; \
 	composer install --no-dev --no-interaction \
+	&& mkdir -p var pub/static pub/media generated/code generated/metadata var/view_preprocessed \
 	&& find var vendor pub/static pub/media app/etc -type f -exec chmod 644 {} + \
 	&& find var vendor pub/static pub/media app/etc -type d -exec chmod 755 {} + \
 	&& chmod u+x bin/magento \
+	# Enable all modules if config.php is missing (fresh install) \
+	&& [ -f app/etc/config.php ] || php bin/magento module:enable --all \
 	# Build Tailwind CSS if any themes have it \
 	&& (tailwind build 2>/dev/null || true) \
-	&& php bin/magento setup:di:compile \
-	&& composer dump-autoload --optimize --no-dev \
-	&& php bin/magento setup:static-content:deploy -f \
-	&& find \
-	app/code \
-	lib \
-	vendor \
-	pub/static \
-	app/etc \
-	generated/code \
-	generated/metadata \
-	var/view_preprocessed \
-	\( -type d -or -type f \) -exec chmod g-w {} \; \
-	&& chmod o-rwx app/etc/env.php
+	# NOTE: di:compile and autoloader optimization are done at container start
+	# because they create references to env.php which doesn't exist at build time.
+	# Remove stub env.php created by module:enable \
+	&& rm -f app/etc/env.php
 
 # Production image — no Node.js, only compiled assets
 FROM magento2-php AS magento2-php-production
 
 COPY --from=magento2-php-build --chown=www-data:www-data /var/www/html /var/www/html
+COPY --from=magento2-php-build /usr/bin/composer /usr/bin/composer
 
 COPY --chmod=755 docker/php/docker-php-entrypoint /usr/local/bin/base-docker-php-entrypoint
 COPY --chmod=755 docker/php/prod-docker-php-entrypoint /usr/local/bin/docker-php-entrypoint

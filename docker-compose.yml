@@ -61,8 +61,8 @@ services:
       # add a /etc/hosts entry like
       # 127.0.0.1   magento.local
       - CONFIG__DEFAULT__WEB__SECURE__ENABLE_HSTS=1
-      - CONFIG__DEFAULT__WEB__UNSECURE__BASE_URL=http://magento.local
-      - CONFIG__DEFAULT__WEB__SECURE__BASE_URL=https://magento.local
+      - CONFIG__DEFAULT__WEB__UNSECURE__BASE_URL=https://${DOMAIN:-magento.local}/
+      - CONFIG__DEFAULT__WEB__SECURE__BASE_URL=https://${DOMAIN:-magento.local}/
       - SEARCH_ENGINE=opensearch
       - OPENSEARCH_HOST=opensearch
       - OPENSEARCH_ENABLE_AUTH=true

@@ -26,8 +26,8 @@ COPY --chown=nginx:nginx ./src/nginx.conf.sample .
 # This could probably be done more efficiently by editing the nginx.conf.sample
 # (so that it doesn't check for existence anymore)
 # Media files need to shared via a named volume (see docker-compose file)
-COPY --chown=nginx:nginx ./src/pub/*.php .
-COPY --chown=nginx:nginx ./src/pub/**/*.php .
+COPY --chown=nginx:nginx ./src/pub/*.php ./pub/
+COPY --chown=nginx:nginx ./src/pub/**/*.php ./pub/
 
 # Enable production optimizations in nginx.conf.sample
 RUN sed -i 's/# expires max/expires max/g' nginx.conf.sample

@@ -1,24 +1,23 @@
 name: Deploy to Staging
 
 on:
-  push:
-    branches: [master]
-    paths-ignore:
-      - "infra/**"
-      - "*.md"
-      - "docs/**"
-      - ".github/workflows/infra.yml"
   workflow_dispatch:
 
 jobs:
   deploy:
-    runs-on: [self-hosted, staging]
+    runs-on: ubuntu-latest
     environment: staging
     env:
       DEPLOY_DIR: /opt/magento2
+      SSH_OPTS: -o StrictHostKeyChecking=no -i /tmp/deploy_key
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+
+      - name: Setup SSH
+        run: |
+          echo "${{ secrets.DEPLOY_SSH_PRIVATE_KEY }}" > /tmp/deploy_key
+          chmod 600 /tmp/deploy_key
 
       - name: Write environment and secrets
         env:
@@ -29,46 +28,64 @@ jobs:
           MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_ROOT_PASSWORD }}
           OPENSEARCH_PASSWORD: ${{ secrets.OPENSEARCH_PASSWORD }}
           STAGING_PASSWORD: ${{ secrets.STAGING_PASSWORD }}
-        run: ./infra/setup-env.sh
-
-      - name: Sync repo to deploy directory
         run: |
-          rsync -a --delete \
+          DEPLOY_DIR=. ./infra/setup-env.sh
+
+      - name: Sync repo to staging server
+        run: |
+          rsync -az --delete \
+            -e "ssh $SSH_OPTS" \
             --exclude='.git' \
-            --exclude='.env' \
-            --exclude='docker/secrets' \
-            "$GITHUB_WORKSPACE/" "$DEPLOY_DIR/"
+            --exclude='docker-compose.override.yml' \
+            ./ root@${{ secrets.STAGING_HOST }}:$DEPLOY_DIR/
 
       - name: Verify Magento source
         run: |
-          if [ ! -f "$DEPLOY_DIR/src/composer.json" ]; then
-            echo "❌ Magento source code not found in src/"
-            echo "   Copy your Magento project into the src/ directory first."
-            exit 1
-          fi
+          ssh $SSH_OPTS root@${{ secrets.STAGING_HOST }} \
+            "test -f $DEPLOY_DIR/src/composer.json || { echo '❌ Magento source not found in src/'; exit 1; }"
 
       - name: Build Docker images
-        working-directory: /opt/magento2
+        env:
+          COMPOSER_AUTH: '{"github-oauth":{"github.com":"${{ secrets.GH_PAT }}"}}'
         run: |
-          set -a && source .env && set +a
-          docker compose build
+          ssh $SSH_OPTS root@${{ secrets.STAGING_HOST }} \
+            "cd $DEPLOY_DIR && docker compose build --build-arg COMPOSER_AUTH='$COMPOSER_AUTH'"
 
       - name: Deploy
-        working-directory: /opt/magento2
+        timeout-minutes: 60
         run: |
-          set -a && source .env && set +a
-          docker compose up -d
+          ssh $SSH_OPTS root@${{ secrets.STAGING_HOST }} bash <<'EOF'
+            cd /opt/magento2
+            # Stop existing containers and remove old state for fresh install
+            docker compose down -v 2>/dev/null || true
 
-          echo "Waiting for services to become healthy..."
-          for i in $(seq 1 60); do
-            if docker compose ps | grep -q "unhealthy"; then
+            docker compose up -d
+
+            echo "Waiting for services to start (max 10 min)..."
+            for i in $(seq 1 120); do
+              # Check if PHP is running (not restarting)
+              php_status=$(docker compose ps php --format json 2>/dev/null | head -1)
+              if echo "$php_status" | grep -q '"running"'; then
+                echo "✅ PHP container is running"
+                docker compose ps
+                exit 0
+              fi
+              if echo "$php_status" | grep -q '"exited"'; then
+                echo "❌ PHP container exited"
+                docker compose logs php --tail=50
+                exit 1
+              fi
               sleep 5
-            else
-              echo "All services healthy!"
-              docker compose ps
-              exit 0
-            fi
-          done
+            done
 
-          echo "WARNING: Some services may not be healthy yet"
-          docker compose ps
+            echo "⏰ Timeout waiting for services"
+            docker compose ps
+            docker compose logs php --tail=50
+            exit 1
+          EOF
+
+      - name: Show PHP container logs
+        if: always()
+        run: |
+          ssh $SSH_OPTS root@${{ secrets.STAGING_HOST }} \
+            "cd /opt/magento2 && docker compose logs php --tail=100" 2>/dev/null || true
