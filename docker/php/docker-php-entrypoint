@@ -49,9 +49,21 @@ else
     php bin/magento setup:install ${args}
 fi
 
-# Auto-detect Hyvä theme and start Tailwind watcher in development
-# Hyvä config (JS/CSS bundling disabled) is set via CONFIG__DEFAULT__DEV__* env vars
+# Auto-detect Hyvä theme and configure accordingly
+# Hyvä uses Tailwind CSS + Alpine.js — Magento's built-in JS/CSS bundling conflicts with it
 if php bin/magento module:status 2>/dev/null | grep -q "Hyva_Theme"; then
+    echo "🎨 Hyvä theme detected — disabling legacy JS/CSS bundling"
+    # Set via env vars so Magento picks them up at runtime (no DB write needed)
+    # Only set if not already defined, so users can override
+    export CONFIG__DEFAULT__DEV__JS__MERGE_FILES="${CONFIG__DEFAULT__DEV__JS__MERGE_FILES:-0}"
+    export CONFIG__DEFAULT__DEV__JS__ENABLE_JS_BUNDLING="${CONFIG__DEFAULT__DEV__JS__ENABLE_JS_BUNDLING:-0}"
+    export CONFIG__DEFAULT__DEV__JS__MINIFY_FILES="${CONFIG__DEFAULT__DEV__JS__MINIFY_FILES:-0}"
+    export CONFIG__DEFAULT__DEV__JS__MOVE_SCRIPT_TO_BOTTOM="${CONFIG__DEFAULT__DEV__JS__MOVE_SCRIPT_TO_BOTTOM:-0}"
+    export CONFIG__DEFAULT__DEV__CSS__MERGE_CSS_FILES="${CONFIG__DEFAULT__DEV__CSS__MERGE_CSS_FILES:-0}"
+    export CONFIG__DEFAULT__DEV__CSS__MINIFY_FILES="${CONFIG__DEFAULT__DEV__CSS__MINIFY_FILES:-0}"
+    export CONFIG__DEFAULT__DEV__TEMPLATE__MINIFY_HTML="${CONFIG__DEFAULT__DEV__TEMPLATE__MINIFY_HTML:-0}"
+    export CONFIG__DEFAULT__CUSTOMER__CAPTCHA__ENABLE="${CONFIG__DEFAULT__CUSTOMER__CAPTCHA__ENABLE:-0}"
+
     # Auto-start Tailwind watcher in the background (dev only)
     deploy_mode=$(php bin/magento deploy:mode:show 2>/dev/null | grep -o "developer\|production" || echo "unknown")
     if [ "$deploy_mode" = "developer" ] && command -v tailwind > /dev/null 2>&1; then

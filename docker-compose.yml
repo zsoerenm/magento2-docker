@@ -62,15 +62,6 @@ services:
       # add a /etc/hosts entry like
       # 127.0.0.1   magento.local
       - CONFIG__DEFAULT__WEB__SECURE__ENABLE_HSTS=1
-      # Hyvä: disable legacy JS/CSS optimization (Tailwind handles CSS, Alpine.js handles JS)
-      - CONFIG__DEFAULT__DEV__JS__MERGE_FILES=0
-      - CONFIG__DEFAULT__DEV__JS__ENABLE_JS_BUNDLING=0
-      - CONFIG__DEFAULT__DEV__JS__MINIFY_FILES=0
-      - CONFIG__DEFAULT__DEV__JS__MOVE_SCRIPT_TO_BOTTOM=0
-      - CONFIG__DEFAULT__DEV__CSS__MERGE_CSS_FILES=0
-      - CONFIG__DEFAULT__DEV__CSS__MINIFY_FILES=0
-      - CONFIG__DEFAULT__DEV__TEMPLATE__MINIFY_HTML=0
-      - CONFIG__DEFAULT__CUSTOMER__CAPTCHA__ENABLE=0
       - CONFIG__DEFAULT__WEB__UNSECURE__BASE_URL=https://${DOMAIN:-magento.local}/
       - CONFIG__DEFAULT__WEB__SECURE__BASE_URL=https://${DOMAIN:-magento.local}/
       - SEARCH_ENGINE=opensearch
