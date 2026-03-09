@@ -70,18 +70,16 @@ RUN set -ex; \
 	composer install --no-dev --no-interaction \
 	&& mkdir -p var pub/static pub/media generated/code generated/metadata var/view_preprocessed \
 	&& chmod u+x bin/magento \
-	# Enable all modules if config.php is missing (fresh install) \
-	&& if [ ! -f app/etc/config.php ]; then php bin/magento module:enable --all; fi \
-	# Remove stub env.php created by module:enable (not needed for build) \
-	&& rm -f app/etc/env.php \
+	# config.php must exist with full config dump (modules, scopes, themes) \
+	# Run `bin/magento app:config:dump` on a running instance to generate it \
+	&& test -f app/etc/config.php \
 	# Compile DI (no DB needed, per Adobe pipeline deployment) \
 	&& php bin/magento setup:di:compile \
 	&& composer dump-autoload --optimize --no-dev \
 	# Build Tailwind CSS if any themes have it \
 	&& (tailwind build 2>/dev/null || true) \
-	# Deploy static content (admin, translations, fallback themes) \
-	# -f forces deploy even without DB; may warn about missing website config \
-	&& (php bin/magento setup:static-content:deploy -f || true)
+	# Deploy static content (requires store/website/theme config in config.php) \
+	&& php bin/magento setup:static-content:deploy -f
 
 # Production image — no Node.js, only compiled assets
 FROM magento2-php AS magento2-php-production
