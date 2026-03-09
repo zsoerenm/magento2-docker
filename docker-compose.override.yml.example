@@ -20,8 +20,11 @@ services:
 
   web:
     build:
-      target: magento2-nginx  # Development: stops at stage 1 (no static assets)
+      target: magento2-nginx  # Development: no COPY --from needed
     image: magento2-nginx
+    volumes:
+      - ./src/nginx.conf.sample:/var/www/html/nginx.conf.sample:ro
+      - ./src/pub:/var/www/html/pub:ro
 
   cron:
     build:
