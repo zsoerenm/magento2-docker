@@ -16,7 +16,7 @@ services:
     build:
       context: .
       dockerfile: docker/php/Dockerfile
-    image: zsoerenm/magento2-php:2.4.7-p3
+    image: ${PHP_IMAGE:-zsoerenm/magento2-php:2.4.7-p3}
     restart: "${DOCKER_RESTART_POLICY:-unless-stopped}"
     depends_on:
       db:
@@ -137,8 +137,8 @@ services:
       context: .
       dockerfile: docker/nginx/Dockerfile
       args:
-        - PHP_IMAGE=zsoerenm/magento2-php:2.4.7-p3
-    image: zsoerenm/magento2-nginx:2.4.7-p3
+        - PHP_IMAGE=${PHP_IMAGE:-zsoerenm/magento2-php:2.4.7-p3}
+    image: ${NGINX_IMAGE:-zsoerenm/magento2-nginx:2.4.7-p3}
     restart: "${DOCKER_RESTART_POLICY:-unless-stopped}"
     depends_on:
       - php
@@ -175,7 +175,7 @@ services:
     build:
       context: .
       dockerfile: docker/php/Dockerfile
-    image: zsoerenm/magento2-php:2.4.7-p3
+    image: ${PHP_IMAGE:-zsoerenm/magento2-php:2.4.7-p3}
     restart: "${DOCKER_RESTART_POLICY:-unless-stopped}"
     depends_on:
       - php
