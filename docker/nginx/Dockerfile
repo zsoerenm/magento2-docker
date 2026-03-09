@@ -15,19 +15,24 @@ RUN set -ex; \
 
 USER nginx
 
-# The following image creates the production environment.
-FROM magento2-nginx
+# Production image — static assets baked in from PHP build stage
+# Media files are still shared via a named volume (uploaded at runtime)
+
+# Reference the PHP image to copy static assets from
+ARG PHP_IMAGE
+# hadolint ignore=DL3006
+FROM ${PHP_IMAGE} AS php_source
+
+FROM magento2-nginx AS magento2-nginx-production
 
 USER root
 
-# Copy the source code over the existing code.
 COPY --chown=nginx:nginx ./src/nginx.conf.sample .
-# Also copy php files from pub folder so that nginx thinks index.php, get.php, etc exists
-# This could probably be done more efficiently by editing the nginx.conf.sample
-# (so that it doesn't check for existence anymore)
-# Media files need to shared via a named volume (see docker-compose file)
 COPY --chown=nginx:nginx ./src/pub/*.php ./pub/
 COPY --chown=nginx:nginx ./src/pub/**/*.php ./pub/
+
+# Copy pre-deployed static content from the PHP production image
+COPY --from=php_source --chown=nginx:nginx /var/www/html/pub/static ./pub/static
 
 # Enable production optimizations in nginx.conf.sample
 RUN sed -i 's/# expires max/expires max/g' nginx.conf.sample
