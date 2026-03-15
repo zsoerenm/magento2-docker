@@ -219,7 +219,7 @@ push_nixos_config() {
     export PATH=/run/current-system/sw/bin:\$PATH
     export SERVER_ROLE=$env
     cd /etc/nixos
-    nixos-rebuild switch 2>&1 | tail -20
+    nixos-rebuild switch --impure 2>&1 | tail -20
 EOF
 
   log "NixOS configuration applied to $env."
