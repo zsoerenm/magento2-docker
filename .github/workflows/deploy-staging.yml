@@ -1,13 +1,15 @@
 name: Deploy to Staging
 
 on:
-  push:
-    branches: [master]
-    paths-ignore:
-      - "infra/**"
-      - "*.md"
-      - "docs/**"
-      - ".github/workflows/infra.yml"
+  workflow_dispatch:
+  # Uncomment the push trigger in your private repo to auto-deploy on push:
+  # push:
+  #   branches: [master]
+  #   paths-ignore:
+  #     - "infra/**"
+  #     - "*.md"
+  #     - "docs/**"
+  #     - ".github/workflows/infra.yml"
   workflow_dispatch:
 
 jobs:

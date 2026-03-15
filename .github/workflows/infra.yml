@@ -1,12 +1,13 @@
 name: Infrastructure
 
 on:
-  push:
-    branches: [master]
-    paths:
-      - "infra/**"
-      - ".github/workflows/infra.yml"
   workflow_dispatch:
+  # Uncomment the push trigger in your private repo to auto-provision on infra changes:
+  # push:
+  #   branches: [master]
+  #   paths:
+  #     - "infra/**"
+  #     - ".github/workflows/infra.yml"
 
 permissions:
   contents: read
