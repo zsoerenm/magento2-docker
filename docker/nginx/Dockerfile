@@ -1,3 +1,6 @@
+# PHP image to copy static assets from in production (must be built first)
+ARG PHP_IMAGE=magento2-php:latest
+
 FROM nginxinc/nginx-unprivileged:1.29.5-alpine AS magento2-nginx
 
 COPY docker/nginx/conf/default.conf.template /etc/nginx/templates/
@@ -18,8 +21,6 @@ USER nginx
 # Production image — static assets baked in from PHP build stage
 # Media files are still shared via a named volume (uploaded at runtime)
 
-# Reference the PHP image to copy static assets from
-ARG PHP_IMAGE=magento2-php:latest
 # hadolint ignore=DL3006
 FROM ${PHP_IMAGE} AS php_source
 
