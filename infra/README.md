@@ -50,7 +50,8 @@ This token allows the infrastructure workflow to automatically save server IPs a
 3. Set **Expiration** as desired
 4. Under **Repository access**, select **"Only select repositories"** and choose `magento2-docker`
 5. Under **Permissions**, grant:
-   - **Actions**: Read & Write *(needed to register the self-hosted runner)*
+   - **Administration**: Read & Write *(needed to register the self-hosted GitHub Actions runner)*
+   - **Actions**: Read & Write *(needed to trigger workflows)*
    - **Secrets**: Read & Write *(needed to auto-save server IPs and SSH key)*
 6. Click **Generate token** and copy it
 7. Add it as a repository secret named **`GH_PAT`**
