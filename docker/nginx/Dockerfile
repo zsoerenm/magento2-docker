@@ -19,7 +19,7 @@ USER nginx
 # Media files are still shared via a named volume (uploaded at runtime)
 
 # Reference the PHP image to copy static assets from
-ARG PHP_IMAGE
+ARG PHP_IMAGE=magento2-php:latest
 # hadolint ignore=DL3006
 FROM ${PHP_IMAGE} AS php_source
 
