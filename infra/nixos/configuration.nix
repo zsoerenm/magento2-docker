@@ -2,13 +2,6 @@
 # Applied to both staging and production via nixos-rebuild --target-host
 { config, pkgs, lib, ... }:
 
-let
-  serverRole =
-    if builtins.pathExists /etc/nixos/server-role
-    then builtins.replaceStrings ["\n"] [""] (builtins.readFile /etc/nixos/server-role)
-    else builtins.getEnv "SERVER_ROLE"; # fallback
-  isStaging = serverRole == "staging";
-in
 {
   imports = [
     ./hardware-configuration.nix
@@ -71,8 +64,9 @@ in
     ];
   };
 
-  # GitHub Actions self-hosted runner user (staging only)
-  users.users.runner = lib.mkIf isStaging {
+  # GitHub Actions self-hosted runner user
+  # Created on all servers (harmless on production, needed on staging)
+  users.users.runner = {
     isNormalUser = true;
     extraGroups = [ "docker" ];
     home = "/home/runner";

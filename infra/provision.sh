@@ -217,7 +217,6 @@ push_nixos_config() {
   # Rebuild NixOS
   ssh -o StrictHostKeyChecking=no -i "$DEPLOY_SSH_PRIVKEY_PATH" root@"$ip" <<EOF
     export PATH=/run/current-system/sw/bin:\$PATH
-    echo "$env" > /etc/nixos/server-role
     cd /etc/nixos
     nixos-rebuild switch 2>&1 | tail -20
 EOF
