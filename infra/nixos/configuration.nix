@@ -3,7 +3,10 @@
 { config, pkgs, lib, ... }:
 
 let
-  serverRole = builtins.getEnv "SERVER_ROLE"; # "staging" or "production"
+  serverRole =
+    if builtins.pathExists /etc/nixos/server-role
+    then builtins.replaceStrings ["\n"] [""] (builtins.readFile /etc/nixos/server-role)
+    else builtins.getEnv "SERVER_ROLE"; # fallback
   isStaging = serverRole == "staging";
 in
 {
