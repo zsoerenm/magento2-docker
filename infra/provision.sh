@@ -246,9 +246,9 @@ setup_github_runner() {
   ssh -o StrictHostKeyChecking=no -i "$DEPLOY_SSH_PRIVKEY_PATH" root@"$ip" bash <<'RUNNER'
     export PATH=/run/current-system/sw/bin:/nix/var/nix/profiles/default/bin:$PATH
 
-    # Create runner user if not exists
-    id -u runner &>/dev/null || useradd -m -s /bin/bash runner
-    usermod -aG docker runner
+    # Runner user is created by NixOS configuration.nix (declarative)
+    # Verify it exists
+    id -u runner || { echo "ERROR: runner user not found. Check configuration.nix"; exit 1; }
 
     RUNNER_DIR="/home/runner/actions-runner"
 

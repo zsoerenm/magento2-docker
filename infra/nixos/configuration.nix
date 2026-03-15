@@ -68,6 +68,13 @@ in
     ];
   };
 
+  # GitHub Actions self-hosted runner user (staging only)
+  users.users.runner = lib.mkIf isStaging {
+    isNormalUser = true;
+    extraGroups = [ "docker" ];
+    home = "/home/runner";
+  };
+
   # Swap (useful for Magento's memory-hungry processes)
   swapDevices = [{
     device = "/swapfile";
