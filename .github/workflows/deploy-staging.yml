@@ -52,7 +52,10 @@ jobs:
         env:
           COMPOSER_AUTH: '{"github-oauth":{"github.com":"${{ secrets.GH_PAT }}"}}'
         working-directory: /opt/magento2
-        run: docker compose build --build-arg COMPOSER_AUTH="$COMPOSER_AUTH"
+        run: |
+          # PHP must be built first — nginx COPY --from references the PHP image for static assets
+          docker compose build php --build-arg COMPOSER_AUTH="$COMPOSER_AUTH"
+          docker compose build web varnish
 
       - name: Deploy
         working-directory: /opt/magento2

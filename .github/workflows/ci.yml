@@ -145,7 +145,9 @@ jobs:
         run: |
           set -a && source .env && set +a
           # Build production images (source baked in, no volume mounts)
-          docker compose build php web varnish
+          # PHP must be built first — nginx COPY --from references the PHP image for static assets
+          docker compose build php
+          docker compose build web varnish
           echo "✅ All production images built"
 
       # ─── Full stack smoke test ─────────────────────────────────────────────

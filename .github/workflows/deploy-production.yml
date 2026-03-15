@@ -41,7 +41,9 @@ jobs:
           fi
 
           set -a && source .env && set +a
-          docker compose build
+          # PHP must be built first — nginx COPY --from references the PHP image for static assets
+          docker compose build php
+          docker compose build web varnish
 
       - name: Transfer images to production
         env:
