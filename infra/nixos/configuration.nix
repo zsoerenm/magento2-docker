@@ -64,8 +64,11 @@
     ];
   };
 
-  # GitHub Actions self-hosted runner user
-  # Created on all servers (harmless on production, needed on staging)
+  # GitHub Actions self-hosted runner (staging only)
+  # Token is written to /etc/nixos/runner-token by the infra workflow
+  # Runner is only started when the token file exists
+  programs.nix-ld.enable = true; # Provides /lib64/ld-linux-x86-64.so.2 for non-NixOS binaries
+
   users.users.runner = {
     isNormalUser = true;
     extraGroups = [ "docker" ];
