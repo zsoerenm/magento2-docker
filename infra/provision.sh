@@ -218,7 +218,10 @@ push_nixos_config() {
   ssh -o StrictHostKeyChecking=no -i "$DEPLOY_SSH_PRIVKEY_PATH" root@"$ip" <<EOF
     export PATH=/run/current-system/sw/bin:\$PATH
     cd /etc/nixos
-    nixos-rebuild switch 2>&1 | tail -20
+    nixos-rebuild switch 2>&1 | tail -40
+    echo "=== Verifying runner user ==="
+    id runner || echo "WARNING: runner user does not exist after nixos-rebuild"
+    cat /etc/nixos/configuration.nix | grep -A3 "users.users.runner" || echo "WARNING: runner not in config"
 EOF
 
   log "NixOS configuration applied to $env."
@@ -260,13 +263,18 @@ setup_github_runner() {
     cd "$RUNNER_DIR"
 
     # Download latest runner
-    RUNNER_VERSION=$(curl -s https://api.github.com/repos/actions/runner/releases/latest | grep -oP '"tag_name": "v\K[^"]+')
+    RUNNER_VERSION=$(curl -s https://api.github.com/repos/actions/runner/releases/latest | sed -n 's/.*"tag_name": "v\([^"]*\)".*/\1/p')
+    echo "Runner version: $RUNNER_VERSION"
+    if [ -z "$RUNNER_VERSION" ]; then
+      echo "ERROR: Could not determine runner version"
+      exit 1
+    fi
     curl -sL "https://github.com/actions/runner/releases/download/v${RUNNER_VERSION}/actions-runner-linux-x64-${RUNNER_VERSION}.tar.gz" | tar xz
+    echo "Files after extraction: $(ls -1 | head -5)"
 
-    chown -R runner:runner "$RUNNER_DIR"
+    chown -R runner:users "$RUNNER_DIR"
 
-    echo "Runner downloaded. Registration requires GITHUB_RUNNER_TOKEN."
-    echo "Run: sudo -u runner ./config.sh --url https://github.com/OWNER/REPO --token TOKEN --unattended --labels self-hosted,staging"
+    echo "Runner downloaded."
 RUNNER
 
   # If we have a runner token, register it
