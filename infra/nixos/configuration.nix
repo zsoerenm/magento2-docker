@@ -79,8 +79,10 @@ in
     tokenFile = /etc/nixos/runner-token;
     name = config.networking.hostName;
     extraLabels = [ "staging" ];
-    extraGroups = [ "docker" ];
     replace = true;
+    serviceOverrides = {
+      SupplementaryGroups = [ "docker" ];
+    };
   };
 
   # Swap (useful for Magento's memory-hungry processes)
