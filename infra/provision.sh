@@ -245,54 +245,17 @@ setup_github_runner() {
 
   log "Setting up GitHub Actions runner on $env ($ip)..."
 
-  ssh -o StrictHostKeyChecking=no -i "$DEPLOY_SSH_PRIVKEY_PATH" root@"$ip" bash <<'RUNNER'
-    export PATH=/run/current-system/sw/bin:/nix/var/nix/profiles/default/bin:$PATH
-
-    # Runner user is created by NixOS configuration.nix (declarative)
-    # Verify it exists
-    id -u runner || { echo "ERROR: runner user not found. Check configuration.nix"; exit 1; }
-
-    RUNNER_DIR="/home/runner/actions-runner"
-
-    if [ -f "$RUNNER_DIR/.runner" ]; then
-      echo "GitHub Actions runner already configured"
-      exit 0
-    fi
-
-    mkdir -p "$RUNNER_DIR"
-    cd "$RUNNER_DIR"
-
-    # Download latest runner
-    RUNNER_VERSION=$(curl -s https://api.github.com/repos/actions/runner/releases/latest | sed -n 's/.*"tag_name": "v\([^"]*\)".*/\1/p')
-    echo "Runner version: $RUNNER_VERSION"
-    if [ -z "$RUNNER_VERSION" ]; then
-      echo "ERROR: Could not determine runner version"
-      exit 1
-    fi
-    curl -sL "https://github.com/actions/runner/releases/download/v${RUNNER_VERSION}/actions-runner-linux-x64-${RUNNER_VERSION}.tar.gz" | tar xz
-    echo "Files after extraction: $(ls -1 | head -5)"
-
-    chown -R runner:users "$RUNNER_DIR"
-
-    echo "Runner downloaded."
-RUNNER
-
-  # If we have a runner token, register it
-  if [ -n "${GITHUB_RUNNER_TOKEN:-}" ] && [ "${GITHUB_RUNNER_TOKEN}" != "null" ]; then
+  # Write PAT token file for NixOS services.github-runners module
+  if [ -n "${GH_PAT:-}" ]; then
     ssh -o StrictHostKeyChecking=no -i "$DEPLOY_SSH_PRIVKEY_PATH" root@"$ip" bash <<EOF
-      cd /home/runner/actions-runner
-      sudo -u runner ./config.sh \
-        --url "https://github.com/${GITHUB_REPOSITORY}" \
-        --token "$GITHUB_RUNNER_TOKEN" \
-        --unattended \
-        --labels "self-hosted,staging" \
-        --replace
-      ./svc.sh install runner
-      ./svc.sh start
+      echo -n "$GH_PAT" > /etc/nixos/runner-token
+      chmod 600 /etc/nixos/runner-token
+      echo "https://github.com/${GITHUB_REPOSITORY}" > /etc/nixos/runner-repo
+      echo "Runner token and repo URL written to /etc/nixos/"
 EOF
-    log "GitHub Actions runner registered and started."
+    log "Runner config files written. NixOS will manage the runner service."
   else
-    log "GITHUB_RUNNER_TOKEN not set. Runner downloaded but not registered."
+    log "GH_PAT not set. Runner will not be configured."
   fi
 }
 
@@ -311,8 +274,8 @@ main() {
   for env in staging production; do
     ensure_server "$env"
     ensure_dns "$env"
-    push_nixos_config "$env"
     setup_github_runner "$env" || log "WARNING: Runner setup failed for $env (non-fatal)"
+    push_nixos_config "$env"
   done
 
   log "Infrastructure provisioning complete!"

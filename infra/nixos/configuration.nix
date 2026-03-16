@@ -2,6 +2,12 @@
 # Applied to both staging and production via nixos-rebuild --target-host
 { config, pkgs, lib, ... }:
 
+let
+  hasRunnerToken = builtins.pathExists /etc/nixos/runner-token;
+  repoUrl = if builtins.pathExists /etc/nixos/runner-repo
+    then lib.strings.trim (builtins.readFile /etc/nixos/runner-repo)
+    else "";
+in
 {
   imports = [
     ./hardware-configuration.nix
@@ -64,15 +70,17 @@
     ];
   };
 
-  # GitHub Actions self-hosted runner (staging only)
-  # Token is written to /etc/nixos/runner-token by the infra workflow
-  # Runner is only started when the token file exists
-  programs.nix-ld.enable = true; # Provides /lib64/ld-linux-x86-64.so.2 for non-NixOS binaries
-
-  users.users.runner = {
-    isNormalUser = true;
+  # GitHub Actions self-hosted runner
+  # Token and repo URL are written to /etc/nixos/ by the infra workflow
+  # Runner is only enabled when both files exist
+  services.github-runners.staging = lib.mkIf (hasRunnerToken && repoUrl != "") {
+    enable = true;
+    url = repoUrl;
+    tokenFile = /etc/nixos/runner-token;
+    name = config.networking.hostName;
+    extraLabels = [ "staging" ];
     extraGroups = [ "docker" ];
-    home = "/home/runner";
+    replace = true;
   };
 
   # Swap (useful for Magento's memory-hungry processes)
