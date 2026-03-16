@@ -8,11 +8,22 @@ set -ex
 # Here an example:
 # For the argument `--db-host` the environment variable `DB_HOST` is checked.
 
-magento_help=$(if [ -e app/etc/env.php ]; then \
-    php bin/magento setup:config:set --help
-else \
+# Check BEFORE --help call (which creates a stub env.php as side effect)
+is_fresh_install=false
+if [ ! -e app/etc/env.php ]; then
+    is_fresh_install=true
+fi
+
+magento_help=$(if [ "$is_fresh_install" = "true" ]; then \
     php bin/magento setup:install --help
+else \
+    php bin/magento setup:config:set --help
 fi)
+
+# Remove stub env.php created by --help if this is a fresh install
+if [ "$is_fresh_install" = "true" ]; then
+    rm -f app/etc/env.php
+fi
 
 args=""
 
@@ -34,8 +45,10 @@ do
     [[ ! -z "$env_var" ]] && args="${args} $arg=${env_var}"
 done < <(echo "$magento_help" | sed 's/^[ \t]*//' | tr -d '[' | grep -- "^--.*=")
 
-if [ -e app/etc/env.php ]
+if [ "$is_fresh_install" = "true" ]
 then
+    php bin/magento setup:install ${args}
+else
     php bin/magento setup:config:set ${args}
 
     # Run database migrations if needed (e.g. after Magento version upgrade)
@@ -45,8 +58,6 @@ then
         php bin/magento cache:flush
         echo "✅ Database upgrade complete"
     fi
-else
-    php bin/magento setup:install ${args}
 fi
 
 # Auto-detect Hyvä theme and configure accordingly
