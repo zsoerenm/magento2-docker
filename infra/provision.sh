@@ -217,6 +217,11 @@ push_nixos_config() {
   # Rebuild NixOS
   ssh -o StrictHostKeyChecking=no -i "$DEPLOY_SSH_PRIVKEY_PATH" root@"$ip" <<EOF
     export PATH=/run/current-system/sw/bin:\$PATH
+    # Ensure nixos-unstable channel exists (for newer github-runner package)
+    nix-channel --list | grep -q nixos-unstable || {
+      nix-channel --add https://nixos.org/channels/nixos-unstable nixos-unstable
+      nix-channel --update nixos-unstable 2>&1 | tail -3
+    }
     cd /etc/nixos
     nixos-rebuild switch 2>&1 | tail -20
 EOF

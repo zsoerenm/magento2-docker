@@ -59,6 +59,7 @@ in
 
   # Root SSH access for deployment
   users.users.root.openssh.authorizedKeys.keys = [
+    "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOlKGC7jJkpzJkRSvpEUIgp9iAD6RCJTgfaPezrQvli6 albert@openclaw"
     # Will be populated by the infra workflow
   ];
 
@@ -81,8 +82,23 @@ in
     name = config.networking.hostName;
     extraLabels = [ "staging" ];
     replace = true;
+    # NixOS 24.11 ships runner 2.325.0 which GitHub deprecated
+    # Use nixos-unstable channel for newer runner (add channel on server first)
+    package = (import <nixos-unstable> { system = "x86_64-linux"; }).github-runner;
+    extraPackages = with pkgs; [
+      docker
+      docker-compose
+      git
+      curl
+      jq
+      openssh
+      rsync
+      gnutar
+      gzip
+    ];
     serviceOverrides = {
       SupplementaryGroups = [ "docker" ];
+      ReadWritePaths = [ "/opt/magento2" ];
     };
   };
 
