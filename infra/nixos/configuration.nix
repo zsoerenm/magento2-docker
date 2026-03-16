@@ -4,7 +4,8 @@
 
 let
   hasRunnerToken = builtins.pathExists /etc/nixos/runner-token;
-  repoUrl = if builtins.pathExists /etc/nixos/runner-repo
+  hasRunnerRepo = builtins.pathExists /etc/nixos/runner-repo;
+  repoUrl = if hasRunnerRepo
     then lib.strings.trim (builtins.readFile /etc/nixos/runner-repo)
     else "";
 in
@@ -76,7 +77,7 @@ in
   services.github-runners.staging = lib.mkIf (hasRunnerToken && repoUrl != "") {
     enable = true;
     url = repoUrl;
-    tokenFile = /etc/nixos/runner-token;
+    tokenFile = "/etc/nixos/runner-token";
     name = config.networking.hostName;
     extraLabels = [ "staging" ];
     replace = true;

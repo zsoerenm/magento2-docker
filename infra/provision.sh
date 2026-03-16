@@ -218,10 +218,7 @@ push_nixos_config() {
   ssh -o StrictHostKeyChecking=no -i "$DEPLOY_SSH_PRIVKEY_PATH" root@"$ip" <<EOF
     export PATH=/run/current-system/sw/bin:\$PATH
     cd /etc/nixos
-    nixos-rebuild switch 2>&1 | tail -40
-    echo "=== Verifying runner user ==="
-    id runner || echo "WARNING: runner user does not exist after nixos-rebuild"
-    cat /etc/nixos/configuration.nix | grep -A3 "users.users.runner" || echo "WARNING: runner not in config"
+    nixos-rebuild switch 2>&1 | tail -20
 EOF
 
   log "NixOS configuration applied to $env."
