@@ -79,7 +79,9 @@ RUN set -ex; \
 	# Build Tailwind CSS if any themes have it \
 	&& (tailwind build 2>/dev/null || true) \
 	# Deploy static content (requires store/website/theme config in config.php) \
-	&& php bin/magento setup:static-content:deploy -f
+	&& php bin/magento setup:static-content:deploy -f \
+	# Remove env.php stub created by di:compile — setup:install creates the real one at runtime \
+	&& rm -f app/etc/env.php
 
 # Production image — no Node.js, only compiled assets
 FROM magento2-php AS magento2-php-production
