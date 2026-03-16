@@ -95,6 +95,13 @@ in
       rsync
       gnutar
       gzip
+      python3
+      bash
+      coreutils
+      findutils
+      gnused
+      gnugrep
+      gawk
     ];
     serviceOverrides = {
       SupplementaryGroups = [ "docker" ];

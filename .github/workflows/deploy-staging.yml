@@ -9,7 +9,6 @@ on:
       - "docs/**"
       - ".github/workflows/infra.yml"
   workflow_dispatch:
-  workflow_dispatch:
 
 jobs:
   deploy:
@@ -21,6 +20,15 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
+      - name: Sync repo to deploy directory
+        run: |
+          rsync -a --delete \
+            --exclude='.git' \
+            --exclude='docker-compose.override.yml' \
+            --exclude='.env' \
+            --exclude='docker/secrets' \
+            "$GITHUB_WORKSPACE/" "$DEPLOY_DIR/"
+
       - name: Write environment and secrets
         env:
           ENV: staging
@@ -30,16 +38,7 @@ jobs:
           MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_ROOT_PASSWORD }}
           OPENSEARCH_PASSWORD: ${{ secrets.OPENSEARCH_PASSWORD }}
           STAGING_PASSWORD: ${{ secrets.STAGING_PASSWORD }}
-        run: ./infra/setup-env.sh
-
-      - name: Sync repo to deploy directory
-        run: |
-          rsync -a --delete \
-            --exclude='.git' \
-            --exclude='docker-compose.override.yml' \
-            --exclude='.env' \
-            --exclude='docker/secrets' \
-            "$GITHUB_WORKSPACE/" "$DEPLOY_DIR/"
+        run: cd "$DEPLOY_DIR" && "$GITHUB_WORKSPACE/infra/setup-env.sh"
 
       - name: Verify Magento source
         run: |
