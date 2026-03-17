@@ -52,8 +52,7 @@ else
     php bin/magento setup:config:set ${args}
 
     # Run database migrations if needed (dev only — production uses prod-docker-php-entrypoint)
-    deploy_mode=$(php bin/magento deploy:mode:show 2>/dev/null | grep -o "developer\|production" || echo "unknown")
-    if [ "$deploy_mode" != "production" ]; then
+    if [ -z "$MAGENTO_PRODUCTION_ENTRYPOINT" ]; then
         if ! php bin/magento setup:db:status > /dev/null 2>&1; then
             echo "⚙️  Database schema is outdated — running setup:upgrade..."
             php bin/magento setup:upgrade

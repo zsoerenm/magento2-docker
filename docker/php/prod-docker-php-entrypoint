@@ -1,6 +1,9 @@
 #!/bin/sh
 set -e
 
+# Signal to base entrypoint that production handles its own setup:upgrade
+export MAGENTO_PRODUCTION_ENTRYPOINT=1
+
 # Run the base entrypoint (handles setup:install or setup:config:set)
 /usr/local/bin/base-docker-php-entrypoint
 
