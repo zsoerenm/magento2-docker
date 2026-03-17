@@ -10,18 +10,7 @@ export MAGENTO_PRODUCTION_ENTRYPOINT=1
 if [ ! -z "$DB_HOST" ]; then
     php bin/magento maintenance:enable
 
-    # setup:install wipes generated/code/ which breaks the optimized autoloader
-    # (it references paths in generated/code/ that no longer exist)
-    # Reset autoloader first, then di:compile to regenerate
-    if [ ! -d generated/code/Magento ]; then
-        echo "⚙️  generated/code/ was wiped by setup:install — regenerating..."
-        composer dump-autoload --no-dev
-        php bin/magento setup:di:compile
-        composer dump-autoload --optimize --no-dev
-    fi
-
     php bin/magento setup:upgrade --keep-generated
-    php bin/magento deploy:mode:set production --skip-compilation
     php bin/magento app:config:import 2>/dev/null || true
     php bin/magento cache:flush
     php bin/magento maintenance:disable

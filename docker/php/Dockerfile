@@ -86,9 +86,7 @@ RUN set -ex; \
 # Production image — no Node.js, only compiled assets
 FROM magento2-php AS magento2-php-production
 
-# Composer is needed at runtime to reset the autoloader after setup:install
-# (setup:install wipes generated/code/ which breaks the optimized classmap)
-COPY --from=composer:2.8.12 /usr/bin/composer /usr/bin/composer
+ENV MAGE_MODE=production
 
 COPY --from=magento2-php-build --chown=www-data:www-data /var/www/html /var/www/html
 
