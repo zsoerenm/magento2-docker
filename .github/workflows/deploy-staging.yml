@@ -22,7 +22,7 @@ jobs:
 
       - name: Sync repo to deploy directory
         run: |
-          rsync -rlp --delete \
+          rsync -rl --delete --chmod=Du=rwx,Dgo=rx,Fu=rw,Fog=r \
             --exclude='.git' \
             --exclude='docker-compose.override.yml' \
             --exclude='.env' \
