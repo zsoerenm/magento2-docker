@@ -1,6 +1,9 @@
 #!/bin/sh
 set -ex
 
+# Remove ready signal from previous run (if container was restarted)
+rm -f /tmp/magento-ready
+
 # Go through the list of possible arguments and check if a corresponding
 # environment variable exists. If yes add it to the list of arguments, that
 # is going to be used for `setup:install` or `setup:config:set`.
@@ -92,6 +95,12 @@ fi
 
 if [ ! -z "$smtp_password" ]; then
     php bin/magento config:set system/smtp/password ${smtp_password}
+fi
+
+# Signal that setup is complete and php-fpm can serve requests
+# (Production entrypoint sets its own ready signal after setup:upgrade)
+if [ -z "$MAGENTO_PRODUCTION_ENTRYPOINT" ]; then
+    touch /tmp/magento-ready
 fi
 
 "$@"

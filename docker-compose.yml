@@ -26,6 +26,18 @@ services:
         condition: service_started
       valkey:
         condition: service_started
+    healthcheck:
+      # The entrypoint creates /tmp/magento-ready when setup is complete (after
+      # setup:install, setup:upgrade, cache:flush, etc.). This prevents autoheal
+      # from restarting the container during long first-time setup (10+ minutes
+      # with 200+ Magento modules), and ensures dependent services (web, varnish)
+      # only start once php-fpm is actually ready to serve requests.
+      test: ["CMD", "test", "-f", "/tmp/magento-ready"]
+      start_period: 30m
+      start_interval: 10s
+      interval: 30s
+      timeout: 5s
+      retries: 3
     volumes:
       - "${DOCKER_MAGENTO_VOLUME:-mediadata:/var/www/html/pub/media}"
     secrets:
@@ -144,7 +156,7 @@ services:
       - php
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/health_check.php"]
-      start_period: 5m
+      start_period: 30m
       start_interval: 10s
       interval: 10s
       timeout: 5s

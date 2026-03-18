@@ -16,4 +16,7 @@ if [ ! -z "$DB_HOST" ]; then
     php bin/magento maintenance:disable
 fi
 
+# Signal that setup is complete and php-fpm can serve requests
+touch /tmp/magento-ready
+
 "$@"
