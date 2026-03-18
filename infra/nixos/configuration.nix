@@ -111,7 +111,7 @@ in
 
   # Create deploy directory before runner starts (ReadWritePaths requires it to exist)
   systemd.tmpfiles.rules = [
-    "d /opt/magento2 0755 root root -"
+    "d /opt/magento2 0775 root docker -"
   ];
 
   # Swap (useful for Magento's memory-hungry processes)
