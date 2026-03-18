@@ -131,6 +131,7 @@ jobs:
           export MYSQL_ROOT_PASSWORD="DummyPassword123"
           export OPENSEARCH_PASSWORD="DummyStr0ngP@ss!"
           export STAGING_PASSWORD="StagingDummy123"
+          export STAGING_PASSWORD="StagingDummy123"
           ./infra/setup-env.sh
 
           # Docker secrets need to be readable inside the container (mounted as root)
