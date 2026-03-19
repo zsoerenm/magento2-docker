@@ -8,13 +8,12 @@ export MAGENTO_PRODUCTION_ENTRYPOINT=1
 /usr/local/bin/base-docker-php-entrypoint
 
 if [ ! -z "$DB_HOST" ]; then
-    php bin/magento maintenance:enable
-
-    # Clear generated code before upgrade — the base entrypoint's setup:config:set
-    # can corrupt the DI-compiled classes from the build stage, causing
-    # "no commands defined" or "Failed to open stream" errors
+    # Clear generated code FIRST — the base entrypoint or a previous failed run
+    # can leave generated/code in a corrupted state, causing "Failed to open stream"
+    # or "no commands defined" errors on any bin/magento call
     rm -rf generated/code/*
 
+    php bin/magento maintenance:enable
     php bin/magento setup:upgrade
     php bin/magento app:config:import 2>/dev/null || true
     php bin/magento setup:di:compile
