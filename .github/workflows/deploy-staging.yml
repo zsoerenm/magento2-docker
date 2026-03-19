@@ -10,59 +10,8 @@ on:
       - ".github/workflows/infra.yml"
   workflow_dispatch:
 
-# Magento's setup:install and setup:upgrade require at least 8 GB RAM.
-# CX23 (4 GB) is not enough — the PHP process gets killed mid-migration.
-# We temporarily upgrade to a larger server type for the deploy, then
-# downgrade back afterwards. The upgrade takes ~1-2 minutes and costs
-# only a few cents (hourly billing).
-env:
-  DEPLOY_SERVER_TYPE: cx33
-  NORMAL_SERVER_TYPE: cx23
-
 jobs:
-  upgrade-server:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout (for config.toml)
-        uses: actions/checkout@v6
-        with:
-          sparse-checkout: infra/config.toml
-
-      - name: Install hcloud
-        run: |
-          curl -sL https://github.com/hetznercloud/cli/releases/latest/download/hcloud-linux-amd64.tar.gz | tar xz
-          sudo mv hcloud /usr/local/bin/
-
-      - name: Upgrade server
-        env:
-          HCLOUD_TOKEN: ${{ secrets.HCLOUD_TOKEN }}
-        run: |
-          SERVER_NAME="magento2-$(python3 -c "
-          import tomllib
-          with open('infra/config.toml', 'rb') as f:
-              data = tomllib.load(f)
-          print(data['servers']['staging']['hostname'])
-          ")"
-          echo "SERVER_NAME=$SERVER_NAME" >> "$GITHUB_ENV"
-
-          CURRENT_TYPE=$(hcloud server describe "$SERVER_NAME" -o json | jq -r '.server_type.name')
-          echo "Current server type: $CURRENT_TYPE"
-
-          if [ "$CURRENT_TYPE" != "$DEPLOY_SERVER_TYPE" ]; then
-            echo "Upgrading $SERVER_NAME to $DEPLOY_SERVER_TYPE for deploy..."
-            hcloud server shutdown "$SERVER_NAME" --poll-interval 5s
-            sleep 10
-            hcloud server change-type --keep-disk "$SERVER_NAME" "$DEPLOY_SERVER_TYPE"
-            hcloud server poweron "$SERVER_NAME" --poll-interval 5s
-            echo "Waiting for server and runner to come back..."
-            sleep 60
-            echo "✅ Server upgraded to $DEPLOY_SERVER_TYPE"
-          else
-            echo "Server already at $DEPLOY_SERVER_TYPE, skipping upgrade"
-          fi
-
   deploy:
-    needs: upgrade-server
     runs-on: [self-hosted, staging]
     environment: staging
     env:
@@ -172,43 +121,3 @@ jobs:
         if: always()
         working-directory: /opt/magento2
         run: docker compose logs php --tail=100
-
-  downgrade-server:
-    needs: deploy
-    if: always()
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout (for config.toml)
-        uses: actions/checkout@v6
-        with:
-          sparse-checkout: infra/config.toml
-
-      - name: Install hcloud
-        run: |
-          curl -sL https://github.com/hetznercloud/cli/releases/latest/download/hcloud-linux-amd64.tar.gz | tar xz
-          sudo mv hcloud /usr/local/bin/
-
-      - name: Downgrade server
-        env:
-          HCLOUD_TOKEN: ${{ secrets.HCLOUD_TOKEN }}
-        run: |
-          SERVER_NAME="magento2-$(python3 -c "
-          import tomllib
-          with open('infra/config.toml', 'rb') as f:
-              data = tomllib.load(f)
-          print(data['servers']['staging']['hostname'])
-          ")"
-
-          CURRENT_TYPE=$(hcloud server describe "$SERVER_NAME" -o json | jq -r '.server_type.name')
-          echo "Current server type: $CURRENT_TYPE"
-
-          if [ "$CURRENT_TYPE" != "$NORMAL_SERVER_TYPE" ]; then
-            echo "Downgrading $SERVER_NAME back to $NORMAL_SERVER_TYPE..."
-            hcloud server shutdown "$SERVER_NAME" --poll-interval 5s
-            sleep 10
-            hcloud server change-type --keep-disk "$SERVER_NAME" "$NORMAL_SERVER_TYPE"
-            hcloud server poweron "$SERVER_NAME" --poll-interval 5s
-            echo "✅ Server downgraded to $NORMAL_SERVER_TYPE"
-          else
-            echo "Server already at $NORMAL_SERVER_TYPE"
-          fi

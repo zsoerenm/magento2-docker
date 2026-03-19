@@ -118,7 +118,9 @@ in
   # Swap (useful for Magento's memory-hungry processes)
   swapDevices = [{
     device = "/swapfile";
-    size = 4096; # 4 GB
+    # Magento's setup:install and setup:upgrade need at least 8 GB RAM.
+    # CX23 has 4 GB RAM, so we need enough swap to compensate.
+    size = 8192; # 8 GB
   }];
 
   # Kernel tuning for OpenSearch
