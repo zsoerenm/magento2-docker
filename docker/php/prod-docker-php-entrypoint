@@ -1,5 +1,5 @@
 #!/bin/sh
-set -e
+set -ex
 
 # Signal to base entrypoint that production handles its own setup:upgrade
 export MAGENTO_PRODUCTION_ENTRYPOINT=1
@@ -14,13 +14,18 @@ if [ ! -z "$DB_HOST" ]; then
     touch var/maintenance.flag
 
     # Clear generated code — may be corrupted by a previous failed run
-    # or stale from the build stage after setup:install ran
-    rm -rf generated/code/*
+    # or stale from the build stage after setup:install ran.
+    # Also remove classmap entries for generated/ from the composer autoloader,
+    # otherwise PHP fatals when trying to load deleted Proxy classes.
+    rm -rf generated/code
+    mkdir -p generated/code
+    sed -i '/generated\//d' vendor/composer/autoload_classmap.php vendor/composer/autoload_static.php
 
     # setup:upgrade regenerates generated/code as needed
     php bin/magento setup:upgrade
     php bin/magento app:config:import 2>/dev/null || true
     php bin/magento setup:di:compile
+    php bin/magento setup:static-content:deploy -f
     php bin/magento cache:flush
 
     rm -f var/maintenance.flag
