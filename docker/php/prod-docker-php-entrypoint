@@ -8,17 +8,22 @@ export MAGENTO_PRODUCTION_ENTRYPOINT=1
 /usr/local/bin/base-docker-php-entrypoint
 
 if [ ! -z "$DB_HOST" ]; then
-    # Clear generated code FIRST — the base entrypoint or a previous failed run
-    # can leave generated/code in a corrupted state, causing "Failed to open stream"
-    # or "no commands defined" errors on any bin/magento call
+    # Enable maintenance mode by touching the flag file directly.
+    # We can't use `php bin/magento maintenance:enable` because generated/code
+    # may be corrupted or missing, and any bin/magento call will fail.
+    touch var/maintenance.flag
+
+    # Clear generated code — may be corrupted by a previous failed run
+    # or stale from the build stage after setup:install ran
     rm -rf generated/code/*
 
-    php bin/magento maintenance:enable
+    # setup:upgrade regenerates generated/code as needed
     php bin/magento setup:upgrade
     php bin/magento app:config:import 2>/dev/null || true
     php bin/magento setup:di:compile
     php bin/magento cache:flush
-    php bin/magento maintenance:disable
+
+    rm -f var/maintenance.flag
 fi
 
 # Signal that setup is complete and php-fpm can serve requests
