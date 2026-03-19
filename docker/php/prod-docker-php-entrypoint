@@ -10,12 +10,13 @@ export MAGENTO_PRODUCTION_ENTRYPOINT=1
 if [ ! -z "$DB_HOST" ]; then
     php bin/magento maintenance:enable
 
-    php bin/magento setup:upgrade --keep-generated
-    php bin/magento app:config:import 2>/dev/null || true
-
-    # Regenerate compiled code — setup:upgrade may invalidate the DI config
-    # built during Docker image build, causing "no commands defined" errors
+    # Clear generated code before upgrade — the base entrypoint's setup:config:set
+    # can corrupt the DI-compiled classes from the build stage, causing
+    # "no commands defined" or "Failed to open stream" errors
     rm -rf generated/code/*
+
+    php bin/magento setup:upgrade
+    php bin/magento app:config:import 2>/dev/null || true
     php bin/magento setup:di:compile
     php bin/magento cache:flush
     php bin/magento maintenance:disable
