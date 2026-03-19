@@ -12,6 +12,11 @@ if [ ! -z "$DB_HOST" ]; then
 
     php bin/magento setup:upgrade --keep-generated
     php bin/magento app:config:import 2>/dev/null || true
+
+    # Regenerate compiled code — setup:upgrade may invalidate the DI config
+    # built during Docker image build, causing "no commands defined" errors
+    rm -rf generated/code/*
+    php bin/magento setup:di:compile
     php bin/magento cache:flush
     php bin/magento maintenance:disable
 fi
