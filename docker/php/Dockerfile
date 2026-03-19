@@ -26,7 +26,7 @@ COPY --chown=www-data:www-data docker/cron/crontab /etc/crontab
 
 # Install all necessary PHP extensions based on composer.json
 # This script parses src/composer.json for ext-* requirements and installs them
-COPY docker/php/install-php-extensions.sh /tmp/
+COPY --chmod=755 docker/php/install-php-extensions.sh /tmp/
 COPY src/composer.json /tmp/composer.json
 
 RUN /tmp/install-php-extensions.sh /tmp/composer.json \
