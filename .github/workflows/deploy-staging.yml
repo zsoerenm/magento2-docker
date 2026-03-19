@@ -16,7 +16,7 @@ on:
 # downgrade back afterwards. The upgrade takes ~1-2 minutes and costs
 # only a few cents (hourly billing).
 env:
-  DEPLOY_SERVER_TYPE: cx43
+  DEPLOY_SERVER_TYPE: cx33
   NORMAL_SERVER_TYPE: cx23
 
 jobs:
