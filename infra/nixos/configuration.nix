@@ -91,6 +91,7 @@ in
       git
       curl
       jq
+      hcloud
       openssh
       rsync
       gnutar
