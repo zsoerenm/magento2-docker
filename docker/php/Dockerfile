@@ -96,7 +96,8 @@ COPY --from=magento2-php-build --chown=www-data:www-data /var/www/html /var/www/
 # copied on first mount (empty volume). The entrypoint always restores it
 # from this backup so config changes in the image take effect on every deploy.
 USER root
-RUN cp app/etc/config.php /usr/local/share/magento-config.php
+RUN cp app/etc/config.php /usr/local/share/magento-config.php \
+    && chmod 644 /usr/local/share/magento-config.php
 USER www-data
 
 COPY --chmod=755 docker/php/docker-php-entrypoint /usr/local/bin/base-docker-php-entrypoint
