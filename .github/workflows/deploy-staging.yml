@@ -73,11 +73,13 @@ jobs:
         working-directory: /opt/magento2
         timeout-minutes: 90
         run: |
-          # Stop existing containers and remove old state for fresh install
-          docker compose down -v 2>/dev/null || true
+          # Stop existing containers but keep volumes (database, media, etc.)
+          # The PHP entrypoint handles both scenarios:
+          # - Fresh install (no env.php): base entrypoint runs setup:install
+          # - Existing install (env.php exists): prod entrypoint runs setup:upgrade
+          docker compose down 2>/dev/null || true
 
-          # Start all services. PHP entrypoint handles setup:install/upgrade,
-          # di:compile, static-content:deploy. Other services wait via healthcheck.
+          # Start all services
           docker compose up -d --wait-timeout 3600 || true
 
           # Wait for PHP to signal readiness (entrypoint creates this file
