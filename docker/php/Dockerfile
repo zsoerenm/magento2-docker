@@ -91,5 +91,11 @@ ENV MAGE_MODE=production
 COPY --from=composer:2.8.12 /usr/bin/composer /usr/bin/composer
 COPY --from=magento2-php-build --chown=www-data:www-data /var/www/html /var/www/html
 
+# Keep a copy of config.php outside the volume mount point.
+# When app/etc/ is mounted as a volume, config.php from the image is only
+# copied on first mount (empty volume). The entrypoint always restores it
+# from this backup so config changes in the image take effect on every deploy.
+RUN cp app/etc/config.php /usr/local/share/magento-config.php
+
 COPY --chmod=755 docker/php/docker-php-entrypoint /usr/local/bin/base-docker-php-entrypoint
 COPY --chmod=755 docker/php/prod-docker-php-entrypoint /usr/local/bin/docker-php-entrypoint

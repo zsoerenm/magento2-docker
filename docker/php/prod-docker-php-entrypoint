@@ -1,6 +1,11 @@
 #!/bin/sh
 set -ex
 
+# Always restore config.php from the image. The app/etc/ directory is a
+# Docker volume so env.php persists across deploys, but config.php must
+# come from the image (it's committed to git and changes with each deploy).
+cp /usr/local/share/magento-config.php app/etc/config.php
+
 # Signal to base entrypoint that production handles its own setup
 export MAGENTO_PRODUCTION_ENTRYPOINT=1
 
