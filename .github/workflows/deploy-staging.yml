@@ -8,10 +8,15 @@ on:
       - "*.md"
       - "docs/**"
       - ".github/workflows/infra.yml"
+  workflow_run:
+    workflows: ["Infrastructure"]
+    types: [completed]
   workflow_dispatch:
 
 jobs:
   deploy:
+    # Skip if triggered by a failed infrastructure run
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
     runs-on: [self-hosted, staging]
     environment: staging
     env:
