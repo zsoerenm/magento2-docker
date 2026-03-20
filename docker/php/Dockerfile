@@ -88,6 +88,7 @@ FROM magento2-php AS magento2-php-production
 
 ENV MAGE_MODE=production
 
+COPY --from=composer:2.8.12 /usr/bin/composer /usr/bin/composer
 COPY --from=magento2-php-build --chown=www-data:www-data /var/www/html /var/www/html
 
 COPY --chmod=755 docker/php/docker-php-entrypoint /usr/local/bin/base-docker-php-entrypoint

@@ -11,12 +11,13 @@ export MAGENTO_PRODUCTION_ENTRYPOINT=1
 rm -f /tmp/magento-ready
 
 if [ ! -z "$DB_HOST" ]; then
-    # Clear generated code before any bin/magento call. This is required
-    # because the PHP autoloader will try to load stale Proxy/Interceptor
-    # classes from a previous run, causing fatal errors during bootstrap.
-    # setup:upgrade regenerates these and runs composer dump-autoload.
+    # Clear generated code and rebuild the autoloader. The Docker image
+    # contains compiled Proxy/Interceptor classes and a classmap pointing
+    # to them from the build stage. We must remove those files AND update
+    # the classmap, otherwise PHP fatals during Magento bootstrap.
     rm -rf generated/code
     mkdir -p generated/code
+    composer dump-autoload
 
     # Standard Magento deployment sequence (Adobe docs):
     # https://experienceleague.adobe.com/docs/commerce-operations/configuration-guide/deployment/technical-details.html
