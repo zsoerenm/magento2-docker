@@ -13,6 +13,13 @@ on:
     types: [completed]
   workflow_dispatch:
 
+# Only one deploy at a time — never cancel a running deploy.
+# setup:install can take 30+ min; interrupting it leaves the DB in a partial
+# state and env.php without install/date, breaking all subsequent deploys.
+concurrency:
+  group: deploy-staging
+  cancel-in-progress: false
+
 jobs:
   deploy:
     # Skip if triggered by a failed infrastructure run

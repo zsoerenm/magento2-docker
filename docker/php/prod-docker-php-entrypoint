@@ -19,20 +19,6 @@ if [ ! -z "$DB_HOST" ]; then
     mkdir -p generated/code
     composer dump-autoload
 
-    # Ensure install date exists in env.php. Without it, Magento CLI thinks
-    # the application isn't installed and hides all commands (including cache:flush).
-    # This can happen if setup:install was interrupted (container killed during first start)
-    # but created env.php before writing the install date (which is the last step).
-    php -r "
-        \$file = 'app/etc/env.php';
-        \$config = include \$file;
-        if (!isset(\$config['install']['date'])) {
-            \$config['install']['date'] = date('r');
-            file_put_contents(\$file, '<?php' . PHP_EOL . 'return ' . var_export(\$config, true) . ';' . PHP_EOL);
-            echo \"Added missing install date to env.php\n\";
-        }
-    "
-
     # Standard Magento deployment sequence (Adobe docs):
     # https://experienceleague.adobe.com/docs/commerce-operations/configuration-guide/deployment/technical-details.html
     php bin/magento setup:upgrade
