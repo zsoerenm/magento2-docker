@@ -1,40 +1,33 @@
 #!/bin/sh
 set -ex
 
-# Signal to base entrypoint that production handles its own setup:upgrade
+# Signal to base entrypoint that production handles its own setup
 export MAGENTO_PRODUCTION_ENTRYPOINT=1
 
 # Run the base entrypoint (handles setup:install or setup:config:set)
 /usr/local/bin/base-docker-php-entrypoint
 
-if [ ! -z "$DB_HOST" ]; then
-    # Enable maintenance mode by touching the flag file directly.
-    # We can't use `php bin/magento maintenance:enable` because generated/code
-    # may be corrupted or missing, and any bin/magento call will fail.
-    touch var/maintenance.flag
+# Remove the ready file so healthcheck fails until setup is complete
+rm -f /tmp/magento-ready
 
-    # Clear generated code — may be corrupted by a previous failed run
-    # or stale from the build stage after setup:install ran.
-    # Also remove classmap entries for generated/ from the composer autoloader,
-    # otherwise PHP fatals when trying to load deleted Proxy classes.
+if [ ! -z "$DB_HOST" ]; then
+    # Clear generated code before any bin/magento call. This is required
+    # because the PHP autoloader will try to load stale Proxy/Interceptor
+    # classes from a previous run, causing fatal errors during bootstrap.
+    # setup:upgrade regenerates these and runs composer dump-autoload.
     rm -rf generated/code
     mkdir -p generated/code
-    sed -i '/generated\//d' vendor/composer/autoload_classmap.php vendor/composer/autoload_static.php
 
-    # setup:upgrade regenerates generated/code as needed
+    # Standard Magento deployment sequence (Adobe docs):
+    # https://experienceleague.adobe.com/docs/commerce-operations/configuration-guide/deployment/technical-details.html
     php bin/magento setup:upgrade
     php bin/magento app:config:import 2>/dev/null || true
     php bin/magento setup:di:compile
     php bin/magento setup:static-content:deploy -f
-    # Clear cache directly instead of bin/magento cache:flush — the CLI can fail
-    # with "no commands defined in cache namespace" if static-content:deploy
-    # leaves generated/code in an inconsistent state
-    rm -rf var/cache/* var/page_cache/* generated/metadata/*
-
-    rm -f var/maintenance.flag
+    php bin/magento cache:flush
 fi
 
 # Signal that setup is complete and php-fpm can serve requests
 touch /tmp/magento-ready
 
-"$@"
+exec "$@"
