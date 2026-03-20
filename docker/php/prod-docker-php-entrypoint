@@ -26,7 +26,10 @@ if [ ! -z "$DB_HOST" ]; then
     php bin/magento app:config:import 2>/dev/null || true
     php bin/magento setup:di:compile
     php bin/magento setup:static-content:deploy -f
-    php bin/magento cache:flush
+    # Clear cache directly instead of bin/magento cache:flush — the CLI can fail
+    # with "no commands defined in cache namespace" if static-content:deploy
+    # leaves generated/code in an inconsistent state
+    rm -rf var/cache/* var/page_cache/* generated/metadata/*
 
     rm -f var/maintenance.flag
 fi
