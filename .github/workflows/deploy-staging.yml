@@ -64,63 +64,37 @@ jobs:
 
       - name: Deploy
         working-directory: /opt/magento2
-        timeout-minutes: 60
+        timeout-minutes: 90
         run: |
           # Stop existing containers and remove old state for fresh install
           docker compose down -v 2>/dev/null || true
 
-          # Start infrastructure services first
-          docker compose up -d db opensearch valkey
+          # Start all services. PHP entrypoint handles setup:install/upgrade,
+          # di:compile, static-content:deploy. Other services wait via healthcheck.
+          docker compose up -d --wait-timeout 3600 || true
 
-          echo "Waiting for database..."
-          for i in $(seq 1 60); do
-            if docker compose exec -T db healthcheck.sh --connect --innodb_initialized 2>/dev/null; then
-              echo "✅ Database ready"
-              break
+          # Wait for PHP to signal readiness (entrypoint creates this file
+          # after setup:install/upgrade + di:compile + static-content:deploy)
+          echo "Waiting for Magento setup to complete (up to 60 min)..."
+          for i in $(seq 1 360); do
+            if docker compose exec -T php test -f /tmp/magento-ready 2>/dev/null; then
+              echo "✅ Magento is ready"
+              docker compose ps
+              exit 0
             fi
-            [ $i -eq 60 ] && echo "⏰ DB timeout" && docker compose logs db --tail=20 && exit 1
-            sleep 5
-          done
-
-          # Start PHP (runs setup:install or setup:upgrade via entrypoint)
-          docker compose up -d php
-
-          echo "Waiting for Magento setup to complete..."
-          for i in $(seq 1 120); do
-            if docker compose exec -T php test -f /var/www/html/app/etc/env.php 2>/dev/null; then
-              echo "✅ Magento env.php exists"
-              break
-            fi
+            # Check for fatal crashes (container exited and stays down)
             php_state=$(docker compose ps php --format '{{.State}}' 2>/dev/null)
             if [ "$php_state" = "exited" ]; then
-              echo "❌ PHP container exited during setup"
-              docker compose logs php --tail=100
+              echo "❌ PHP container exited"
+              docker compose logs php --tail=50
               exit 1
             fi
-            sleep 5
+            sleep 10
           done
 
-          # Wait for PHP-FPM to be ready
-          echo "Waiting for PHP-FPM..."
-          for i in $(seq 1 120); do
-            if docker compose exec -T php php-fpm -t 2>/dev/null; then
-              echo "✅ PHP-FPM ready"
-              break
-            fi
-            php_state=$(docker compose ps php --format '{{.State}}' 2>/dev/null)
-            if [ "$php_state" = "exited" ] || [ "$php_state" = "restarting" ]; then
-              echo "❌ PHP container in state: $php_state"
-              docker compose logs php --tail=100
-              exit 1
-            fi
-            sleep 5
-          done
-
-          # Start remaining services
-          docker compose up -d
-
-          echo "✅ All services started"
-          docker compose ps
+          echo "⏰ Timeout waiting for Magento setup"
+          docker compose logs php --tail=50
+          exit 1
 
       - name: Show PHP container logs
         if: always()
