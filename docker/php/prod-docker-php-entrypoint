@@ -6,24 +6,24 @@ set -ex
 # come from the image (it's committed to git and changes with each deploy).
 cp /usr/local/share/magento-config.php app/etc/config.php
 
-# Signal to base entrypoint that production handles its own setup
-export MAGENTO_PRODUCTION_ENTRYPOINT=1
-
-# Run the base entrypoint (handles setup:install or setup:config:set)
-/usr/local/bin/base-docker-php-entrypoint
-
 # Remove the ready file so healthcheck fails until setup is complete
 rm -f /tmp/magento-ready
 
-if [ ! -z "$DB_HOST" ]; then
-    # Clear generated code and rebuild the autoloader. The Docker image
-    # contains compiled Proxy/Interceptor classes and a classmap pointing
-    # to them from the build stage. We must remove those files AND update
-    # the classmap, otherwise PHP fatals during Magento bootstrap.
-    rm -rf generated/code
-    mkdir -p generated/code
-    composer dump-autoload
+# Clear generated code and rebuild the autoloader BEFORE any bin/magento call.
+# The Docker image contains compiled Proxy/Interceptor classes from the build
+# stage. These must be removed so the autoloader doesn't fatal on stale classes.
+rm -rf generated/code
+mkdir -p generated/code
+composer dump-autoload
 
+# Signal to base entrypoint that production handles setup:upgrade separately
+export MAGENTO_PRODUCTION_ENTRYPOINT=1
+
+# Run the base entrypoint (handles setup:install on fresh or setup:config:set
+# on existing installs — picks up env var changes like BASE_URL, DB credentials)
+/usr/local/bin/base-docker-php-entrypoint
+
+if [ ! -z "$DB_HOST" ]; then
     # Standard Magento deployment sequence (Adobe docs):
     # https://experienceleague.adobe.com/docs/commerce-operations/configuration-guide/deployment/technical-details.html
     php bin/magento setup:upgrade

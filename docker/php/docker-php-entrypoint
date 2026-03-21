@@ -4,13 +4,6 @@ set -ex
 # Remove ready signal from previous run (if container was restarted)
 rm -f /tmp/magento-ready
 
-# In production, the prod-docker-php-entrypoint handles setup:upgrade
-# and di:compile. Skip env-based arg parsing here — it calls
-# setup:config:set --help which triggers autoloading and can corrupt
-# the generated/code directory when the DB isn't ready yet.
-if [ "$MAGENTO_PRODUCTION_ENTRYPOINT" = "1" ] && [ -e app/etc/env.php ]; then
-    return 0 2>/dev/null || exit 0
-fi
 
 # Go through the list of possible arguments and check if a corresponding
 # environment variable exists. If yes add it to the list of arguments, that
