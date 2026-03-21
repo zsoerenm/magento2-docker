@@ -14,7 +14,11 @@ RUN set -ex; \
     && addgroup -g 1000 -S nginx \
     && adduser -S -D -H -u 1000 -s /sbin/nologin -G nginx -g nginx nginx \
     && chown -R nginx:0 /var/cache/nginx \
-    && chown -R nginx:0 /etc/nginx
+    && chown -R nginx:0 /etc/nginx \
+    # TLS is terminated by Caddy upstream — tell PHP the request was HTTPS
+    # so Magento generates https:// URLs. This overrides the default
+    # "fastcgi_param HTTPS $https;" from fastcgi_params.
+    && echo 'fastcgi_param HTTPS on;' >> /etc/nginx/fastcgi_params
 
 USER nginx
 
