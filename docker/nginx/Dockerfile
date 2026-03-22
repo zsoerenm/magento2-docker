@@ -16,9 +16,9 @@ RUN set -ex; \
     && chown -R nginx:0 /var/cache/nginx \
     && chown -R nginx:0 /etc/nginx \
     # TLS is terminated by Caddy upstream — tell PHP the request was HTTPS
-    # so Magento generates https:// URLs. This overrides the default
-    # "fastcgi_param HTTPS $https;" from fastcgi_params.
-    && echo 'fastcgi_param HTTPS on;' >> /etc/nginx/fastcgi_params
+    # so Magento generates https:// URLs. Replace the conditional HTTPS param
+    # with an unconditional one (always "on").
+    && sed -i 's/fastcgi_param  HTTPS.*$/fastcgi_param  HTTPS              on;/' /etc/nginx/fastcgi_params
 
 USER nginx
 
