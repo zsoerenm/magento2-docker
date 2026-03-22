@@ -53,7 +53,7 @@ if [ "$is_fresh_install" = "true" ]
 then
     php bin/magento setup:install ${args}
 else
-    php bin/magento setup:config:set ${args}
+    php bin/magento setup:config:set --no-interaction ${args}
 
     # setup:config:set doesn't support --base-url (deprecated, setup:install only).
     # Set it via config:set so the DB value stays in sync with the env var.
