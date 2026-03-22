@@ -138,32 +138,142 @@ On first run, it will:
 
 ## Creating Your Private Shop
 
-This repository is a **GitHub template**. To build your own Magento shop on top of it, create a private repository from the template:
+This repository is a **GitHub template**. To build your own Magento shop on top of it, create a private repository from the template.
 
-### 1. Create from template
+### 1. Create from Template
 
 On GitHub, click the green **"Use this template"** → **"Create a new repository"**. Set it to **Private** — it will contain your shop-specific code and configuration.
 
-### 2. Customize
+Clone your new repo locally:
 
-Add your shop-specific files. The template repo doesn't touch these paths, so upstream syncs stay clean:
-
-```
-your-private-repo/
-├── infra/config.toml              # ← Edit: your real domains, server config, etc.
-├── src/
-│   ├── app/code/YourVendor/       # ← Your custom Magento modules
-│   ├── app/design/frontend/       # ← Your custom theme
-│   └── composer.json              # ← Add your dependencies
-├── docker-compose.override.yml    # ← Optional: extra services, dev volumes
-└── .github/workflows/             # ← Inherited from template, works as-is
+```bash
+git clone git@github.com:your-username/your-shop.git
+cd your-shop
 ```
 
-### 3. Set up GitHub Secrets
+### 2. Download Magento Source
+
+Download the Magento source code into `src/` and install dependencies:
+
+```bash
+wget -qO- https://github.com/magento/magento2/archive/refs/tags/$(cat .magento-version).tar.gz \
+    | tar xzfo - --strip-components=1 -C src/
+docker compose run --rm composer install
+```
+
+### 3. Install Hyvä Theme (Optional)
+
+If you want to use the [Hyvä theme](https://hyva.io), install it now. See the main [README](../README.md#installing-hyvä) for the full instructions.
+
+**From GitHub (no account needed):**
+
+```bash
+for repo in magento2-theme-module magento2-default-theme magento2-default-theme-csp \
+  magento2-base-layout-reset magento2-compat-module-fallback magento2-luma-checkout \
+  magento2-theme-fallback magento2-order-cancellation-webapi magento2-email-module \
+  magento2-mollie-theme-bundle; do
+  docker compose run --rm composer config repositories.hyva-themes/$repo git https://github.com/hyva-themes/$repo.git
+done
+docker compose run --rm composer require "hyva-themes/magento2-default-theme:^1.3.21"
+```
+
+If your Hyvä repos are private, you need to configure authentication. Add your GitHub token as a `COMPOSER_AUTH` build arg — see the Dockerfile for details.
+
+### 4. Generate config.php
+
+The `app/etc/config.php` file registers all Magento modules and must be committed to git. Generate it by running the local development stack once:
+
+```bash
+# Set up local dev environment
+cp .env.example .env
+# Create secrets
+mkdir -p docker/secrets
+echo "magento2" > docker/secrets/db_password.txt
+echo "root" > docker/secrets/mysql_root_password.txt
+echo "admin123" > docker/secrets/admin_password.txt
+echo "" > docker/secrets/smtp_password.txt
+# Create local dev certificates (requires mkcert: https://github.com/FiloSottile/mkcert)
+mkcert -key-file certs/key.pem -cert-file certs/cert.pem magento.local localhost
+# Start the stack
+docker compose up -d
+# Wait for Magento to finish installation (watch logs)
+docker compose logs -f php
+# Once you see "magento-ready", Ctrl-C and verify:
+docker compose exec php php bin/magento module:status
+```
+
+If you installed Hyvä, activate the theme:
+
+```bash
+docker compose exec php php bin/magento setup:upgrade
+```
+
+Then copy out the generated `config.php`:
+
+```bash
+# config.php is now generated — verify it exists
+ls -la src/app/etc/config.php
+```
+
+> **Important:** `config.php` must be committed to git. The production Docker build will fail without it (`test -f app/etc/config.php` check in Dockerfile). The file `env.php` must NOT be committed — it contains passwords and is generated at deploy time.
+
+Stop the local stack when done:
+
+```bash
+docker compose down
+```
+
+### 5. Configure Infrastructure
+
+Edit `infra/config.toml` with your real domains, admin details, and server configuration. See the comments in the file for guidance.
+
+### 6. Set up GitHub Secrets
 
 Follow the [Setup (One-Time)](#setup-one-time) steps above in your private repo.
 
-### 4. Syncing with upstream
+### 7. Commit and Push
+
+```bash
+git add -A
+git commit -m "feat: initial Magento 2 setup"
+git push origin master
+```
+
+This triggers:
+1. **Infrastructure workflow** → provisions Hetzner servers, installs NixOS, sets up runner
+2. **Deploy workflow** → builds Docker images, runs `setup:install`, deploys to staging
+
+The first deploy takes ~15–30 minutes (Magento setup:install is slow). Subsequent deploys are much faster (setup:upgrade only).
+
+### 8. Verify
+
+Once the deploy workflow completes:
+
+```bash
+# Check staging (use the credentials from config.toml staging.access)
+curl -u staging:yourpassword https://staging.yourdomain.com/
+```
+
+The admin panel is at `https://staging.yourdomain.com/admin_x7k9m` (or whatever you set in `config.toml`).
+
+### Repository Structure
+
+```
+your-private-repo/
+├── infra/config.toml              # ← Your domains, server config, admin details
+├── src/
+│   ├── app/etc/config.php         # ← MUST be committed (module registry)
+│   ├── app/code/YourVendor/       # ← Your custom Magento modules
+│   ├── app/design/frontend/       # ← Your custom theme
+│   ├── composer.json              # ← Your dependencies (incl. Hyvä)
+│   └── composer.lock              # ← Locked dependency versions
+├── .env                           # ← Local dev config (gitignored)
+├── docker/secrets/                # ← Local dev passwords (gitignored)
+├── docker-compose.override.yml    # ← Optional: local dev overrides (gitignored)
+└── .github/workflows/             # ← Inherited from template, works as-is
+```
+
+### Syncing with Upstream
 
 When the template repo gets updates (Docker improvements, workflow fixes, dependency bumps), pull them into your repo:
 
