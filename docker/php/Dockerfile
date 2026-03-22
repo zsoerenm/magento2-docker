@@ -18,14 +18,7 @@ RUN set -ex; \
 	&& echo "date.timezone=${PHP_TIMEZONE:-UTC}" > $PHP_INI_DIR/conf.d/date_timezone.ini \
 	&& echo "memory_limit=${PHP_MEMORY_LIMIT:-2G}" > $PHP_INI_DIR/conf.d/memory_limit.ini \
 	&& echo "max_execution_time=${PHP_MAX_EXECUTION_TIME:-1800}" > $PHP_INI_DIR/conf.d/max_execution_time.ini \
-	&& echo "zlib.output_compression=${PHP_ZLIB_COMPRESSION:-On}" > $PHP_INI_DIR/conf.d/zlib_compression.ini \
-	# Allow PHP-FPM workers to see container environment variables.
-	# Magento reads CONFIG__DEFAULT__* env vars to override store config
-	# (base URLs, cache settings, SMTP, etc). PHP-FPM defaults to
-	# clear_env=yes which strips them. Without this, the first request
-	# after cache:flush rebuilds the config cache without the overrides,
-	# causing redirects to http://localhost/.
-	&& sed -i 's/;clear_env = no/clear_env = no/' /usr/local/etc/php-fpm.d/www.conf
+	&& echo "zlib.output_compression=${PHP_ZLIB_COMPRESSION:-On}" > $PHP_INI_DIR/conf.d/zlib_compression.ini
 
 COPY docker/php/config/opcache.ini $PHP_INI_DIR/conf.d/
 
