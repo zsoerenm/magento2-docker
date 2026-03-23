@@ -95,6 +95,7 @@ services:
       - SESSION_SAVE=redis
       - SESSION_SAVE_REDIS_HOST=valkey
       - SESSION_SAVE_REDIS_DB=3
+      - HTTP_CACHE_HOSTS=varnish
 
   valkey:
     image: valkey/valkey:8.1.4-alpine
@@ -164,7 +165,8 @@ services:
     image: ${NGINX_IMAGE:-magento2-nginx:latest}
     restart: "${DOCKER_RESTART_POLICY:-unless-stopped}"
     depends_on:
-      - php
+      php:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/health_check.php"]
       start_period: 30m
