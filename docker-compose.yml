@@ -40,7 +40,7 @@ services:
       retries: 3
     volumes:
       - "${DOCKER_MAGENTO_VOLUME:-mediadata:/var/www/html/pub/media}"
-      - appetc:/var/www/html/app/etc
+      - "${DOCKER_APPETC_VOLUME:-appetc:/var/www/html/app/etc}"
     secrets:
       - db_password
       - admin_password
@@ -205,7 +205,7 @@ services:
       - db
     volumes:
       - "${DOCKER_MAGENTO_VOLUME:-mediadata:/var/www/html/pub/media}"
-      - appetc:/var/www/html/app/etc
+      - "${DOCKER_APPETC_VOLUME:-appetc:/var/www/html/app/etc}"
     entrypoint: "/usr/bin/supercronic /etc/crontab"
   
   securetermination:
