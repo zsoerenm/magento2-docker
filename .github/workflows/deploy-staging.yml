@@ -93,6 +93,10 @@ jobs:
           for i in $(seq 1 360); do
             if docker compose exec -T php test -f /tmp/magento-ready 2>/dev/null; then
               echo "✅ Magento is ready"
+              # Flush caches after all services (including Varnish) are up.
+              # The entrypoint's cache:flush runs before Varnish starts, so
+              # the PURGE request fails silently. This ensures a clean cache.
+              docker compose exec -T php php bin/magento cache:flush 2>/dev/null || true
               docker compose ps
               exit 0
             fi
