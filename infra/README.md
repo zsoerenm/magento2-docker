@@ -208,14 +208,21 @@ If you installed Hyvä, activate the theme:
 docker compose exec php php bin/magento setup:upgrade
 ```
 
-Then copy out the generated `config.php`:
+Then re-generate `config.php` with only modules, scopes, and themes (no system config):
 
 ```bash
-# config.php is now generated — verify it exists
+docker compose exec php php bin/magento app:config:dump scopes themes
+```
+
+> **Important:** Always use `app:config:dump scopes themes` — never a bare `app:config:dump`. A full dump writes all system configuration into config.php's `system` section which **locks** those values. Locked values cannot be overridden by `config:set`, database entries, or `CONFIG__DEFAULT__*` environment variables. This breaks base URL configuration and other runtime settings in production.
+
+Verify it exists:
+
+```bash
 ls -la src/app/etc/config.php
 ```
 
-> **Important:** `config.php` must be committed to git. The production Docker build will fail without it (`test -f app/etc/config.php` check in Dockerfile). The file `env.php` must NOT be committed — it contains passwords and is generated at deploy time.
+> `config.php` must be committed to git. The production Docker build will fail without it (`test -f app/etc/config.php` check in Dockerfile). The file `env.php` must NOT be committed — it contains passwords and is generated at deploy time.
 
 Stop the local stack when done:
 
