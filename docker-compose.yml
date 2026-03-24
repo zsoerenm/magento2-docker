@@ -203,8 +203,10 @@ services:
     image: ${PHP_IMAGE:-magento2-php:latest}
     restart: "${DOCKER_RESTART_POLICY:-unless-stopped}"
     depends_on:
-      - php
-      - db
+      php:
+        condition: service_healthy
+      db:
+        condition: service_healthy
     volumes:
       - "${DOCKER_MAGENTO_VOLUME:-mediadata:/var/www/html/pub/media}"
       - "${DOCKER_APPETC_VOLUME:-appetc:/var/www/html/app/etc}"

@@ -93,21 +93,6 @@ jobs:
           for i in $(seq 1 360); do
             if docker compose exec -T php test -f /tmp/magento-ready 2>/dev/null; then
               echo "✅ Magento is ready"
-
-              # Wait for Varnish to be up before flushing caches.
-              # The entrypoint's cache:flush runs before Varnish starts,
-              # so the PURGE request fails silently. We must wait for the
-              # full chain: PHP healthy → web healthy → varnish up.
-              echo "Waiting for Varnish..."
-              for v in $(seq 1 30); do
-                if docker compose exec -T varnish varnishadm ping 2>/dev/null | grep -q PONG; then
-                  break
-                fi
-                sleep 5
-              done
-
-              docker compose exec -T php php bin/magento cache:flush 2>/dev/null || true
-              echo "✅ Caches flushed (including Varnish PURGE)"
               docker compose ps
               exit 0
             fi
