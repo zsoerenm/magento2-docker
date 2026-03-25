@@ -18,6 +18,9 @@ RUN set -ex; \
 	&& echo "date.timezone=${PHP_TIMEZONE:-UTC}" > $PHP_INI_DIR/conf.d/date_timezone.ini \
 	&& echo "memory_limit=${PHP_MEMORY_LIMIT:-2G}" > $PHP_INI_DIR/conf.d/memory_limit.ini \
 	&& echo "max_execution_time=${PHP_MAX_EXECUTION_TIME:-1800}" > $PHP_INI_DIR/conf.d/max_execution_time.ini \
+	# Pass environment variables to PHP-FPM workers. Without this, CONFIG__DEFAULT__*
+	# env vars are stripped and Magento falls back to DB values (e.g. wrong base URL).
+	&& sed -i 's/;clear_env = no/clear_env = no/' /usr/local/etc/php-fpm.d/www.conf \
 	&& echo "zlib.output_compression=${PHP_ZLIB_COMPRESSION:-On}" > $PHP_INI_DIR/conf.d/zlib_compression.ini
 
 COPY docker/php/config/opcache.ini $PHP_INI_DIR/conf.d/
