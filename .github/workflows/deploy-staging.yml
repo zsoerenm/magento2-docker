@@ -8,9 +8,6 @@ on:
       - "*.md"
       - "docs/**"
       - ".github/workflows/infra.yml"
-  workflow_run:
-    workflows: ["Infrastructure"]
-    types: [completed]
   workflow_dispatch:
 
 # Only one deploy at a time — never cancel a running deploy.
