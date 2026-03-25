@@ -59,6 +59,7 @@ USER www-data
 COPY --from=composer:2.8.12 /usr/bin/composer /usr/bin/composer
 
 COPY --chown=www-data:www-data ./src .
+COPY --chown=www-data:www-data docker/php/generate-config.php /usr/local/bin/generate-config.php
 
 ENV COMPOSER_HOME=/tmp/.composer
 
@@ -70,8 +71,10 @@ RUN set -ex; \
 	composer install --no-dev --no-interaction \
 	&& mkdir -p var pub/static pub/media generated/code generated/metadata var/view_preprocessed \
 	&& chmod u+x bin/magento \
-	# config.php must exist with full config dump (modules, scopes, themes) \
-	# Run `bin/magento app:config:dump` on a running instance to generate it \
+	# Generate config.php if missing (modules, scopes, themes from filesystem) \
+	&& if [ ! -f app/etc/config.php ]; then \
+		php /usr/local/bin/generate-config.php .; \
+	fi \
 	&& test -f app/etc/config.php \
 	# Compile DI (no DB needed, per Adobe pipeline deployment) \
 	&& php bin/magento setup:di:compile \
