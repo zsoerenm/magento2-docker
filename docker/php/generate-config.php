@@ -11,6 +11,9 @@
  *        Default magento-root is the current directory.
  */
 
+error_reporting(E_ALL);
+ini_set('display_errors', '1');
+
 $magentoRoot = rtrim($argv[1] ?? getcwd(), '/');
 
 if (!is_file("$magentoRoot/composer.json")) {
@@ -28,10 +31,11 @@ function discoverModules(string $root): array
 {
     $modules = [];
 
-    // Paths where modules live
+    // Paths where modules live (various directory layouts)
     $searchPaths = [
         "$root/app/code/*/*/etc/module.xml",
         "$root/vendor/*/*/etc/module.xml",
+        "$root/vendor/*/*/src/etc/module.xml",
     ];
 
     foreach ($searchPaths as $pattern) {
@@ -66,6 +70,10 @@ function discoverThemes(string $root): array
 
     foreach ($searchPaths as $pattern) {
         foreach (glob($pattern) ?: [] as $themeXml) {
+            // Skip test fixtures
+            if (strpos($themeXml, '/tests/') !== false || strpos($themeXml, '/Test/') !== false) {
+                continue;
+            }
             $theme = parseTheme($themeXml, $root);
             if ($theme) {
                 $key = $theme['area'] . '/' . $theme['theme_path'];
@@ -219,15 +227,38 @@ $config = [
 ];
 
 $configFile = "$magentoRoot/app/etc/config.php";
-$content = "<?php\nreturn " . var_export($config, true) . ";\n";
-
-// Clean up var_export output for readability
-$content = preg_replace('/array \(/', '[', $content);
-$content = preg_replace('/\)$/', ']', $content);
-$content = preg_replace('/\)(,?)$/m', ']$1', $content);
-$content = str_replace("=> \n", "=> ", $content);
+$content = "<?php\nreturn " . varExportShort($config, true) . ";\n";
 
 file_put_contents($configFile, $content);
+
+/**
+ * var_export with short array syntax and proper formatting.
+ */
+function varExportShort($var, bool $return = false, int $indent = 0): ?string
+{
+    $spaces = str_repeat('    ', $indent);
+    $innerSpaces = str_repeat('    ', $indent + 1);
+
+    if (is_array($var)) {
+        $isAssoc = array_keys($var) !== range(0, count($var) - 1);
+        $lines = [];
+        foreach ($var as $key => $value) {
+            $exportedKey = $isAssoc ? var_export($key, true) . ' => ' : '';
+            $lines[] = $innerSpaces . $exportedKey . varExportShort($value, true, $indent + 1);
+        }
+        $result = "[\n" . implode(",\n", $lines) . "\n{$spaces}]";
+    } elseif (is_null($var)) {
+        $result = 'null';
+    } else {
+        $result = var_export($var, true);
+    }
+
+    if ($return) {
+        return $result;
+    }
+    echo $result;
+    return null;
+}
 
 $moduleCount = count($modules);
 $themeCount = count($themes);
