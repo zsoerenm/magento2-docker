@@ -39,7 +39,21 @@ if [ ! -z "$DB_HOST" ]; then
 
     php bin/magento setup:di:compile
     php bin/magento setup:static-content:deploy -f
-    php bin/magento cache:flush
+
+    # Flush ALL Magento caches directly in Valkey/Redis. We cannot use
+    # `bin/magento cache:flush` here because it bootstraps Magento (CLI),
+    # which rebuilds the config cache as a side effect — before PHP-FPM
+    # even starts. The FPM workers then serve the CLI-built cache.
+    # Direct FLUSHDB ensures the first FPM request builds a fresh cache.
+    if [ ! -z "$CACHE_BACKEND_REDIS_SERVER" ]; then
+        REDIS_HOST="${CACHE_BACKEND_REDIS_SERVER}"
+        for db in ${CACHE_BACKEND_REDIS_DB:-1} ${PAGE_CACHE_REDIS_DB:-2}; do
+            echo "Flushing cache DB $db on $REDIS_HOST..."
+            printf "SELECT %s\r\nFLUSHDB\r\nQUIT\r\n" "$db" | timeout 5 nc "$REDIS_HOST" 6379 2>/dev/null || true
+        done
+    else
+        php bin/magento cache:flush
+    fi
 fi
 
 # Signal that setup is complete and php-fpm can serve requests
