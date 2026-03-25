@@ -47,7 +47,7 @@ if [ ! -z "$DB_HOST" ]; then
     # Direct FLUSHDB ensures the first FPM request builds a fresh cache.
     if [ ! -z "$CACHE_BACKEND_REDIS_SERVER" ]; then
         echo "Flushing all Valkey/Redis databases..."
-        printf "FLUSHALL\r\nQUIT\r\n" | timeout 5 nc "${CACHE_BACKEND_REDIS_SERVER}" 6379 2>/dev/null || true
+        php -r "\$r = @fsockopen('${CACHE_BACKEND_REDIS_SERVER}', 6379, \$e, \$m, 5); if (\$r) { fwrite(\$r, \"FLUSHALL\r\n\"); echo trim(fgets(\$r)) . PHP_EOL; fclose(\$r); } else { echo \"Could not connect: \$m\n\"; }" || true
     else
         php bin/magento cache:flush
     fi
