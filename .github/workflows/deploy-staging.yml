@@ -90,11 +90,6 @@ jobs:
           for i in $(seq 1 360); do
             if docker compose exec -T php test -f /tmp/magento-ready 2>/dev/null; then
               echo "✅ Magento is ready"
-              # Final cache flush after ALL services are up. The entrypoint's
-              # cache:flush runs before PHP-FPM starts, but any bin/magento
-              # CLI call before it may have rebuilt the config cache.
-              # This ensures a clean cache for the first real web request.
-              docker compose exec -T php php bin/magento cache:flush 2>/dev/null || true
               docker compose ps
               exit 0
             fi
