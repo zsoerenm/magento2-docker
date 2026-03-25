@@ -41,6 +41,14 @@ if [ ! -z "$DB_HOST" ]; then
     php bin/magento setup:static-content:deploy -f
 
     php bin/magento cache:flush
+
+    # Double-flush: clear Valkey directly AFTER bin/magento cache:flush.
+    # cache:flush bootstraps Magento CLI which may rebuild the config cache
+    # as a side effect with values from setup:install (e.g. magento.local).
+    # The direct FLUSHALL ensures a truly empty cache for the first FPM request.
+    if [ ! -z "$CACHE_BACKEND_REDIS_SERVER" ]; then
+        php -r "\$r = @fsockopen(getenv('CACHE_BACKEND_REDIS_SERVER'), 6379, \$e, \$m, 5); if (\$r) { fwrite(\$r, \"FLUSHALL\r\n\"); fgets(\$r); fclose(\$r); }"
+    fi
 fi
 
 # Signal that setup is complete and php-fpm can serve requests
