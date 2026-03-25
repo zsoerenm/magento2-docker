@@ -117,14 +117,27 @@ ensure_server() {
       sed -i 's|rm -rf $bootFs.bak|bootFs="${bootFs:-/boot}"; rm -rf $bootFs.bak|' /tmp/nixos-infect
       nohup bash -c 'NIX_CHANNEL=nixos-24.11 bash /tmp/nixos-infect 2>&1 | tee /tmp/nixos-infect.log' &>/dev/null &
 INFECT
-    # Wait for nixos-infect to finish and reboot the server
-    log "Waiting for nixos-infect to complete (this takes ~5 minutes)..."
-    sleep 300
+    # Wait for nixos-infect to finish and reboot the server.
+    # nixos-infect downloads Nix, builds NixOS, then reboots. On CX23 this
+    # can take 10-15 minutes. We detect completion by waiting for SSH to drop
+    # (reboot) and then come back (NixOS booted).
+    log "Waiting for nixos-infect to reboot the server (up to 20 minutes)..."
 
-    log "Waiting for reboot after nixos-infect..."
+    # Phase 1: wait for SSH to DROP (indicates reboot started)
+    for i in $(seq 1 120); do
+      if ! ssh -o StrictHostKeyChecking=no -o ConnectTimeout=3 -i "$DEPLOY_SSH_PRIVKEY_PATH" root@"$ip" echo ok &>/dev/null; then
+        log "SSH dropped — server is rebooting."
+        break
+      fi
+      sleep 10
+    done
+
+    # Phase 2: wait for SSH to come back (NixOS booted)
+    log "Waiting for NixOS to boot..."
     sleep 30
-    for i in $(seq 1 30); do
-      if ssh -o StrictHostKeyChecking=no -o ConnectTimeout=5 -i "$DEPLOY_SSH_PRIVKEY_PATH" root@"$ip" echo ok 2>/dev/null; then
+    for i in $(seq 1 60); do
+      if ssh -o StrictHostKeyChecking=no -o ConnectTimeout=5 -i "$DEPLOY_SSH_PRIVKEY_PATH" root@"$ip" "command -v nixos-rebuild" &>/dev/null; then
+        log "NixOS is ready."
         break
       fi
       sleep 10
