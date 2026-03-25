@@ -33,7 +33,7 @@ services:
       # with 200+ Magento modules), and ensures dependent services (web, varnish)
       # only start once php-fpm is actually ready to serve requests.
       test: ["CMD", "test", "-f", "/tmp/magento-ready"]
-      start_period: 30m
+      start_period: 90m
       start_interval: 10s
       interval: 30s
       timeout: 5s
@@ -169,7 +169,7 @@ services:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/health_check.php"]
-      start_period: 30m
+      start_period: 90m
       start_interval: 10s
       interval: 10s
       timeout: 5s
