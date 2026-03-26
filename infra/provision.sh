@@ -107,6 +107,14 @@ ensure_server() {
       sleep 5
     done
 
+    # Add any extra SSH keys from NixOS config so operators can inspect
+    # the server while nixos-infect is running or if it fails.
+    log "Adding SSH keys from NixOS config to Ubuntu authorized_keys..."
+    grep -oP '"ssh-[^"]+' "$SCRIPT_DIR/nixos/configuration.nix" | tr -d '"' | while read -r key; do
+      ssh -o StrictHostKeyChecking=no -i "$DEPLOY_SSH_PRIVKEY_PATH" root@"$ip" \
+        "grep -qF '${key}' ~/.ssh/authorized_keys 2>/dev/null || echo '${key}' >> ~/.ssh/authorized_keys" 2>/dev/null
+    done
+
     log "Installing NixOS via nixos-infect..."
     # nixos-infect reboots the server at the end, which kills the SSH session.
     # We use nohup + background to let it run independently, then wait for reboot.
@@ -227,19 +235,25 @@ push_nixos_config() {
     "$tmp_nixos/"* root@"$ip":/etc/nixos/
   rm -rf "$tmp_nixos"
 
-  # Rebuild NixOS
-  ssh -o StrictHostKeyChecking=no -i "$DEPLOY_SSH_PRIVKEY_PATH" root@"$ip" <<EOF
-    export PATH=/run/current-system/sw/bin:\$PATH
-    # Ensure nixos-unstable channel exists (for newer github-runner package)
-    nix-channel --list | grep -q nixos-unstable || {
-      nix-channel --add https://nixos.org/channels/nixos-unstable nixos-unstable
-      nix-channel --update nixos-unstable 2>&1 | tail -3
-    }
-    cd /etc/nixos
-    nixos-rebuild switch 2>&1 | tail -20
+  # Rebuild NixOS (skip if NixOS is not installed yet — nixos-infect may still be running)
+  if ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 -i "$DEPLOY_SSH_PRIVKEY_PATH" root@"$ip" \
+    "command -v nixos-rebuild" &>/dev/null; then
+    ssh -o StrictHostKeyChecking=no -i "$DEPLOY_SSH_PRIVKEY_PATH" root@"$ip" <<EOF
+      export PATH=/run/current-system/sw/bin:\$PATH
+      # Ensure nixos-unstable channel exists (for newer github-runner package)
+      nix-channel --list | grep -q nixos-unstable || {
+        nix-channel --add https://nixos.org/channels/nixos-unstable nixos-unstable
+        nix-channel --update nixos-unstable 2>&1 | tail -3
+      }
+      cd /etc/nixos
+      nixos-rebuild switch 2>&1 | tail -20
 EOF
-
-  log "NixOS configuration applied to $env."
+    log "NixOS configuration applied to $env."
+  else
+    log "WARNING: nixos-rebuild not found on $env — NixOS may not be installed yet."
+    log "  Run the infra workflow again after nixos-infect completes."
+    log "  You can SSH in to inspect: ssh root@$ip"
+  fi
 }
 
 ###############################################################################
