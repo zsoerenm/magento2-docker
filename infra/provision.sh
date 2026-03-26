@@ -116,14 +116,21 @@ ensure_server() {
     done
 
     log "Installing NixOS via nixos-infect..."
-    # nixos-infect reboots the server at the end, which kills the SSH session.
-    # We use nohup + background to let it run independently, then wait for reboot.
+    # Run nixos-infect with NO_REBOOT=1 so it completes without killing
+    # the SSH session. We handle the reboot explicitly afterwards.
+    # The || true ensures we don't fail if nixos-infect exits non-zero
+    # (e.g. swap cleanup issues with set -e).
     ssh -o StrictHostKeyChecking=no -i "$DEPLOY_SSH_PRIVKEY_PATH" root@"$ip" bash <<'INFECT'
       curl -L https://raw.githubusercontent.com/elitak/nixos-infect/master/nixos-infect -o /tmp/nixos-infect
-      # Workaround: on BIOS systems, $bootFs is unset causing "mv/cp .bak" to fail.
-      # Prepend bootFs=/boot as a safe default for non-EFI systems.
-      sed -i 's|rm -rf $bootFs.bak|bootFs="${bootFs:-/boot}"; rm -rf $bootFs.bak|' /tmp/nixos-infect
-      nohup bash -c 'NIX_CHANNEL=nixos-24.11 bash /tmp/nixos-infect 2>&1 | tee /tmp/nixos-infect.log' &>/dev/null &
+      NO_REBOOT=1 NIX_CHANNEL=nixos-24.11 bash /tmp/nixos-infect 2>&1 | tee /tmp/nixos-infect.log || true
+      # Verify NixOS was installed before rebooting
+      if [ -e /etc/NIXOS ] && [ -e /nix/var/nix/profiles/system ]; then
+        echo "nixos-infect completed successfully, rebooting..."
+        reboot
+      else
+        echo "ERROR: nixos-infect did not complete — /etc/NIXOS or system profile missing"
+        exit 1
+      fi
 INFECT
     # Wait for nixos-infect to finish and reboot the server.
     # nixos-infect downloads Nix, builds NixOS, then reboots. On CX23 this
