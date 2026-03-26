@@ -1,3 +1,59 @@
+# Shared Magento environment variables for PHP and Cron containers.
+# Both containers must see the same CONFIG__DEFAULT__* env vars so they
+# build identical config caches. Without this, cron would fall back to
+# DB defaults (e.g. magento.local) and poison the shared Valkey cache.
+x-magento-env: &magento-env
+  - DB_HOST=db
+  - DB_USER=${DB_USER}
+  - DB_NAME=${DB_NAME}
+  - DB_PASSWORD_FILE=/run/secrets/db_password
+  - BACKEND_FRONTNAME=${BACKEND_FRONTNAME}
+  - ADMIN_USER=admin
+  - ADMIN_PASSWORD_FILE=/run/secrets/admin_password
+  - ADMIN_EMAIL=${ADMIN_EMAIL}
+  - ADMIN_FIRSTNAME=${ADMIN_FIRSTNAME}
+  - ADMIN_LASTNAME=${ADMIN_LASTNAME}
+  - CONFIG__DEFAULT__TRANS_EMAIL__IDENT_GENERAL__NAME=${TRANS_EMAIL_NAME}
+  - CONFIG__DEFAULT__TRANS_EMAIL__IDENT_GENERAL__EMAIL=${TRANS_EMAIL_ADDRESS}
+  - CONFIG__DEFAULT__SYSTEM__SMTP__TRANSPORT=${SMTP_TRANSPORT}
+  - CONFIG__DEFAULT__SYSTEM__SMTP__HOST=${SMTP_HOST}
+  - CONFIG__DEFAULT__SYSTEM__SMTP__PORT=${SMTP_PORT}
+  - CONFIG__DEFAULT__SYSTEM__SMTP__USERNAME=${SMTP_USERNAME}
+  - CONFIG__DEFAULT__SYSTEM__SMTP__PASSWORD_UNENCRYPTED_FILE=/run/secrets/smtp_password
+  - CONFIG__DEFAULT__SYSTEM__SMTP__AUTH=${SMTP_AUTH}
+  - CONFIG__DEFAULT__SYSTEM__SMTP__SSL=${SMTP_SSL}
+  # Set caching application to Varnish (=2) default is 1
+  - CONFIG__DEFAULT__SYSTEM__FULL_PAGE_CACHE__CACHING_APPLICATION=2
+  - CONFIG__DEFAULT__WEB__SECURE__USE_IN_ADMINHTML=1
+  - CONFIG__DEFAULT__WEB__SECURE__USE_IN_FRONTEND=1
+  # Firefox and Chrome do not upgrade to https automatically for localhost
+  # Hence, create a certificate for a url other than localhost (e.g. magento.local) and
+  # add a /etc/hosts entry like
+  # 127.0.0.1   magento.local
+  - CONFIG__DEFAULT__WEB__SECURE__ENABLE_HSTS=1
+  - BASE_URL=https://${DOMAIN:-magento.local}/
+  - BASE_URL_SECURE=https://${DOMAIN:-magento.local}/
+  - CONFIG__DEFAULT__WEB__UNSECURE__BASE_URL=https://${DOMAIN:-magento.local}/
+  - CONFIG__DEFAULT__WEB__SECURE__BASE_URL=https://${DOMAIN:-magento.local}/
+  - CONFIG__DEFAULT__WEB__SEO__USE_REWRITES=1
+  - SEARCH_ENGINE=opensearch
+  - OPENSEARCH_HOST=opensearch
+  - OPENSEARCH_ENABLE_AUTH=true
+  - OPENSEARCH_USERNAME=admin
+  - OPENSEARCH_PASSWORD=${OPENSEARCH_PASSWORD}
+  # Change these values to valkey in 2.4.9
+  # see https://experienceleague.adobe.com/en/docs/commerce-operations/configuration-guide/cache/valkey/valkey-pg-cache#
+  - CACHE_BACKEND=redis
+  - CACHE_BACKEND_REDIS_SERVER=valkey
+  - CACHE_BACKEND_REDIS_DB=1
+  - PAGE_CACHE=redis
+  - PAGE_CACHE_REDIS_SERVER=valkey
+  - PAGE_CACHE_REDIS_DB=2
+  - SESSION_SAVE=redis
+  - SESSION_SAVE_REDIS_HOST=valkey
+  - SESSION_SAVE_REDIS_DB=3
+  - HTTP_CACHE_HOSTS=varnish
+
 secrets:
   db_password:
     file: ./docker/secrets/db_password.txt
@@ -45,57 +101,7 @@ services:
       - db_password
       - admin_password
       - smtp_password
-    environment:
-      - DB_HOST=db
-      - DB_USER=${DB_USER}
-      - DB_NAME=${DB_NAME}
-      - DB_PASSWORD_FILE=/run/secrets/db_password
-      - BACKEND_FRONTNAME=${BACKEND_FRONTNAME}
-      - ADMIN_USER=admin
-      - ADMIN_PASSWORD_FILE=/run/secrets/admin_password
-      - ADMIN_EMAIL=${ADMIN_EMAIL}
-      - ADMIN_FIRSTNAME=${ADMIN_FIRSTNAME}
-      - ADMIN_LASTNAME=${ADMIN_LASTNAME}
-      - CONFIG__DEFAULT__TRANS_EMAIL__IDENT_GENERAL__NAME=${TRANS_EMAIL_NAME}
-      - CONFIG__DEFAULT__TRANS_EMAIL__IDENT_GENERAL__EMAIL=${TRANS_EMAIL_ADDRESS}
-      - CONFIG__DEFAULT__SYSTEM__SMTP__TRANSPORT=${SMTP_TRANSPORT}
-      - CONFIG__DEFAULT__SYSTEM__SMTP__HOST=${SMTP_HOST}
-      - CONFIG__DEFAULT__SYSTEM__SMTP__PORT=${SMTP_PORT}
-      - CONFIG__DEFAULT__SYSTEM__SMTP__USERNAME=${SMTP_USERNAME}
-      - CONFIG__DEFAULT__SYSTEM__SMTP__PASSWORD_UNENCRYPTED_FILE=/run/secrets/smtp_password
-      - CONFIG__DEFAULT__SYSTEM__SMTP__AUTH=${SMTP_AUTH}
-      - CONFIG__DEFAULT__SYSTEM__SMTP__SSL=${SMTP_SSL}
-      # Set caching application to Varnish (=2) default is 1
-      - CONFIG__DEFAULT__SYSTEM__FULL_PAGE_CACHE__CACHING_APPLICATION=2
-      - CONFIG__DEFAULT__WEB__SECURE__USE_IN_ADMINHTML=1
-      - CONFIG__DEFAULT__WEB__SECURE__USE_IN_FRONTEND=1
-      # Firefox and Chrome do not upgrade to https automatically for localhost
-      # Hence, create a certificate for a url other than localhost (e.g. magento.local) and
-      # add a /etc/hosts entry like
-      # 127.0.0.1   magento.local
-      - CONFIG__DEFAULT__WEB__SECURE__ENABLE_HSTS=1
-      - BASE_URL=https://${DOMAIN:-magento.local}/
-      - BASE_URL_SECURE=https://${DOMAIN:-magento.local}/
-      - CONFIG__DEFAULT__WEB__UNSECURE__BASE_URL=https://${DOMAIN:-magento.local}/
-      - CONFIG__DEFAULT__WEB__SECURE__BASE_URL=https://${DOMAIN:-magento.local}/
-      - CONFIG__DEFAULT__WEB__SEO__USE_REWRITES=1
-      - SEARCH_ENGINE=opensearch
-      - OPENSEARCH_HOST=opensearch
-      - OPENSEARCH_ENABLE_AUTH=true
-      - OPENSEARCH_USERNAME=admin
-      - OPENSEARCH_PASSWORD=${OPENSEARCH_PASSWORD}
-      # Change these values to valkey in 2.4.9
-      # see https://experienceleague.adobe.com/en/docs/commerce-operations/configuration-guide/cache/valkey/valkey-pg-cache#
-      - CACHE_BACKEND=redis
-      - CACHE_BACKEND_REDIS_SERVER=valkey
-      - CACHE_BACKEND_REDIS_DB=1
-      - PAGE_CACHE=redis
-      - PAGE_CACHE_REDIS_SERVER=valkey
-      - PAGE_CACHE_REDIS_DB=2
-      - SESSION_SAVE=redis
-      - SESSION_SAVE_REDIS_HOST=valkey
-      - SESSION_SAVE_REDIS_DB=3
-      - HTTP_CACHE_HOSTS=varnish
+    environment: *magento-env
 
   valkey:
     image: valkey/valkey:8.1.4-alpine
@@ -210,8 +216,12 @@ services:
     volumes:
       - "${DOCKER_MAGENTO_VOLUME:-mediadata:/var/www/html/pub/media}"
       - "${DOCKER_APPETC_VOLUME:-appetc:/var/www/html/app/etc}"
+    secrets:
+      - db_password
+      - smtp_password
+    environment: *magento-env
     entrypoint: "/usr/bin/supercronic /etc/crontab"
-  
+
   securetermination:
     image: caddy:2.10.2-alpine
     restart: "${DOCKER_RESTART_POLICY:-unless-stopped}"

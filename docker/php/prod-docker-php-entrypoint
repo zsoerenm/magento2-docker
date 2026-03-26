@@ -30,23 +30,6 @@ if [ ! -z "$DB_HOST" ]; then
     php bin/magento app:config:import 2>/dev/null || true
     php bin/magento setup:di:compile
     php bin/magento setup:static-content:deploy -f
-
-    # Write base URL directly to core_config_data via SQL.
-    # bin/magento config:set silently fails to write to DB in some scenarios
-    # (e.g. after setup:install when no web/* entries exist yet).
-    # Direct SQL INSERT is reliable and avoids CLI config cache side effects.
-    if [ ! -z "$BASE_URL" ]; then
-        php -r "
-            \$env = include 'app/etc/env.php';
-            \$db = \$env['db']['connection']['default'];
-            \$pdo = new PDO(\"mysql:host={\$db['host']};dbname={\$db['dbname']}\", \$db['username'], \$db['password']);
-            foreach (['web/unsecure/base_url', 'web/secure/base_url'] as \$path) {
-                \$stmt = \$pdo->prepare('INSERT INTO core_config_data (scope, scope_id, path, value) VALUES (\"default\", 0, ?, ?) ON DUPLICATE KEY UPDATE value = ?');
-                \$stmt->execute([\$path, getenv('BASE_URL'), getenv('BASE_URL')]);
-            }
-            echo \"Base URL set to \" . getenv('BASE_URL') . PHP_EOL;
-        "
-    fi
     php bin/magento cache:flush
 fi
 
