@@ -28,6 +28,35 @@ if [ ! -z "$DB_HOST" ]; then
     # https://experienceleague.adobe.com/docs/commerce-operations/configuration-guide/deployment/technical-details.html
     php bin/magento setup:upgrade
     php bin/magento app:config:import 2>/dev/null || true
+
+    # Resolve MAGENTO_THEME to a numeric theme_id now that the DB is ready.
+    # Writes to both core_config_data (for cron/CLI processes) and exports as
+    # CONFIG__DEFAULT__DESIGN__THEME__THEME_ID (for this PHP-FPM process).
+    # Must happen after setup:upgrade (which creates the theme table).
+    if [ ! -z "$MAGENTO_THEME" ] && [ -e app/etc/env.php ]; then
+        THEME_ID=$(php -r "
+            \$env = include 'app/etc/env.php';
+            \$db = \$env['db']['connection']['default'] ?? null;
+            if (!\$db) exit(0);
+            try {
+                \$pdo = new PDO(\"mysql:host={\$db['host']};dbname={\$db['dbname']}\", \$db['username'], \$db['password']);
+                \$stmt = \$pdo->prepare('SELECT theme_id FROM theme WHERE theme_path = ? AND area = \"frontend\" LIMIT 1');
+                \$stmt->execute([getenv('MAGENTO_THEME')]);
+                \$id = \$stmt->fetchColumn();
+                if (\$id) {
+                    // Write to DB so cron and other CLI processes see it too
+                    \$pdo->prepare('INSERT INTO core_config_data (scope, scope_id, path, value) VALUES (\"default\", 0, \"design/theme/theme_id\", ?) ON DUPLICATE KEY UPDATE value = ?')
+                         ->execute([\$id, \$id]);
+                    echo \$id;
+                }
+            } catch (Exception \$e) {}
+        " 2>/dev/null || true)
+        if [ ! -z "$THEME_ID" ]; then
+            export CONFIG__DEFAULT__DESIGN__THEME__THEME_ID="$THEME_ID"
+            echo "🎨 Theme '${MAGENTO_THEME}' resolved to ID ${THEME_ID}"
+        fi
+    fi
+
     php bin/magento setup:di:compile
     php bin/magento setup:static-content:deploy -f
     php bin/magento cache:flush
