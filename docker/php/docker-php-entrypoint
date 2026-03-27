@@ -73,34 +73,33 @@ else
     fi
 fi
 
+# Resolve MAGENTO_THEME (e.g. "Hyva/default") to a numeric theme_id and export
+# as CONFIG__DEFAULT__DESIGN__THEME__THEME_ID. This lets users set the theme
+# declaratively via env var instead of clicking through the admin panel.
+if [ ! -z "$MAGENTO_THEME" ] && [ -e app/etc/env.php ]; then
+    THEME_ID=$(php -r "
+        \$env = include 'app/etc/env.php';
+        if (!isset(\$env['db']['connection']['default'])) exit(0);
+        \$db = \$env['db']['connection']['default'];
+        try {
+            \$pdo = new PDO(\"mysql:host={\$db['host']};dbname={\$db['dbname']}\", \$db['username'], \$db['password']);
+            \$stmt = \$pdo->prepare('SELECT theme_id FROM theme WHERE theme_path = ? AND area = \"frontend\" LIMIT 1');
+            \$stmt->execute([getenv('MAGENTO_THEME')]);
+            echo \$stmt->fetchColumn() ?: '';
+        } catch (Exception \$e) {}
+    " 2>/dev/null || true)
+    if [ ! -z "$THEME_ID" ]; then
+        export CONFIG__DEFAULT__DESIGN__THEME__THEME_ID="$THEME_ID"
+        echo "🎨 Theme '${MAGENTO_THEME}' resolved to ID ${THEME_ID}"
+    else
+        echo "⚠️  Theme '${MAGENTO_THEME}' not found in DB — will be available after setup:install"
+    fi
+fi
+
 # Auto-detect Hyvä theme and configure accordingly
 # Hyvä uses Tailwind CSS + Alpine.js — Magento's built-in JS/CSS bundling conflicts with it
 if php bin/magento module:status 2>/dev/null | grep -q "Hyva_Theme"; then
-    echo "🎨 Hyvä theme detected — configuring for Hyvä"
-
-    # Auto-activate Hyvä theme if no theme is set yet (fresh install).
-    # We look up the theme_id from the DB theme table and set it in core_config_data.
-    # This can't be done via CONFIG__DEFAULT__ env var because the theme_id is numeric
-    # and varies per installation.
-    if [ -e app/etc/env.php ]; then
-        php -r "
-            \$env = include 'app/etc/env.php';
-            if (!isset(\$env['db']['connection']['default'])) exit(0);
-            \$db = \$env['db']['connection']['default'];
-            try {
-                \$pdo = new PDO(\"mysql:host={\$db['host']};dbname={\$db['dbname']}\", \$db['username'], \$db['password']);
-                // Check if a theme is already set
-                \$existing = \$pdo->query(\"SELECT value FROM core_config_data WHERE path='design/theme/theme_id' AND scope='default'\")->fetchColumn();
-                if (\$existing) { echo \"Theme already set (ID \$existing), skipping.\n\"; exit(0); }
-                // Find the Hyvä theme ID
-                \$hyvaId = \$pdo->query(\"SELECT theme_id FROM theme WHERE theme_path='Hyva/default' AND area='frontend' LIMIT 1\")->fetchColumn();
-                if (!\$hyvaId) { echo \"Hyvä theme not found in DB, skipping.\n\"; exit(0); }
-                \$stmt = \$pdo->prepare('INSERT INTO core_config_data (scope, scope_id, path, value) VALUES (\"default\", 0, \"design/theme/theme_id\", ?)');
-                \$stmt->execute([\$hyvaId]);
-                echo \"✅ Activated Hyvä theme (ID \$hyvaId)\n\";
-            } catch (Exception \$e) { echo \"Theme auto-set skipped: \" . \$e->getMessage() . \"\n\"; }
-        " || true
-    fi
+    echo "🎨 Hyvä theme detected — disabling legacy JS/CSS bundling"
 
     # Disable legacy JS/CSS bundling — Hyvä uses Tailwind + Alpine.js
     # Set via env vars so Magento picks them up at runtime (no DB write needed)

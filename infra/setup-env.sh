@@ -76,6 +76,9 @@ print(f'MYSQL_ROOT_PASSWORD={get("database", "root_password")}')
 print(f'OPENSEARCH_PASSWORD={get("opensearch", "password")}')
 print(f'CADDY_EMAIL={get("tls", "certificate_email")}')
 print(f'DOMAIN={domain}')
+theme = get("admin", "theme")
+if theme:
+    print(f'MAGENTO_THEME={theme}')
 
 # Staging access restriction
 staging_user = get("access", "username")

@@ -53,6 +53,9 @@ x-magento-env: &magento-env
   - SESSION_SAVE_REDIS_HOST=valkey
   - SESSION_SAVE_REDIS_DB=3
   - HTTP_CACHE_HOSTS=varnish
+  # Set the frontend theme by path (e.g. Hyva/default, Magento/luma).
+  # The entrypoint resolves this to a numeric theme_id at runtime.
+  - MAGENTO_THEME=${MAGENTO_THEME:-}
 
 secrets:
   db_password:

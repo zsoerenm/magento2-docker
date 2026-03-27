@@ -41,6 +41,12 @@ zone = "example.com"
 # the admin panel will be accessible at https://shop.example.com/admin_x7k9m
 # Use a random string to prevent brute-force attacks on the login page.
 admin_url_path = "admin_x7k9m"
+
+# ─── Theme ────────────────────────────────────────────────────────────────────
+
+# Frontend theme by path (e.g. "Hyva/default"). Leave empty for Magento default (Luma).
+# The entrypoint resolves this to a numeric theme_id at runtime.
+theme = ""
 email = "admin@example.com"
 firstname = "Admin"
 lastname = "User"
