@@ -9,13 +9,6 @@ cp /usr/local/share/magento-config.php app/etc/config.php
 # Remove the ready file so healthcheck fails until setup is complete
 rm -f /tmp/magento-ready
 
-# Clear generated code and rebuild the autoloader BEFORE any bin/magento call.
-# The Docker image contains compiled Proxy/Interceptor classes from the build
-# stage. These must be removed so the autoloader doesn't fatal on stale classes.
-rm -rf generated/code
-mkdir -p generated/code
-composer dump-autoload
-
 # Signal to base entrypoint that production handles setup:upgrade separately
 export MAGENTO_PRODUCTION_ENTRYPOINT=1
 
@@ -24,9 +17,10 @@ export MAGENTO_PRODUCTION_ENTRYPOINT=1
 /usr/local/bin/base-docker-php-entrypoint
 
 if [ ! -z "$DB_HOST" ]; then
-    # Standard Magento deployment sequence (Adobe docs):
-    # https://experienceleague.adobe.com/docs/commerce-operations/configuration-guide/deployment/technical-details.html
-    php bin/magento setup:upgrade
+    # Adobe pipeline deployment: di:compile and static-content:deploy are done
+    # at build time in the Dockerfile. At runtime we only run setup:upgrade
+    # with --keep-generated to preserve the compiled code from the build stage.
+    php bin/magento setup:upgrade --keep-generated
     php bin/magento app:config:import 2>/dev/null || true
 
     # Resolve MAGENTO_THEME to a numeric theme_id now that the DB is ready.
@@ -57,8 +51,6 @@ if [ ! -z "$DB_HOST" ]; then
         fi
     fi
 
-    php bin/magento setup:di:compile
-    php bin/magento setup:static-content:deploy -f
     php bin/magento cache:flush
 fi
 
