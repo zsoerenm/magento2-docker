@@ -83,7 +83,7 @@ RUN set -ex; \
 	&& php bin/magento setup:di:compile \
 	&& composer dump-autoload --optimize --no-dev \
 	# Build Tailwind CSS if any themes have it \
-	&& (tailwind build 2>/dev/null || true) \
+	&& (tailwind build || echo "⚠️ Tailwind build skipped — no custom themes with web/tailwind found") \
 	# Deploy static content (requires store/website/theme config in config.php) \
 	&& php bin/magento setup:static-content:deploy -f \
 	# Remove env.php stub created by di:compile — setup:install creates the real one at runtime \
