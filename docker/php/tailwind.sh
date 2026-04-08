@@ -25,7 +25,7 @@ for dir in $TAILWIND_DIRS; do
     fi
 
     echo "   📦 Installing dependencies..."
-    (cd "$dir" && npm ci --silent)
+    (cd "$dir" && npm install --silent)
 
     case "$MODE" in
         watch)
