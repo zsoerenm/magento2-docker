@@ -25,16 +25,16 @@ for dir in $TAILWIND_DIRS; do
     fi
 
     echo "   📦 Installing dependencies..."
-    (cd "$dir" && npm install --silent)
+    (cd "$dir" && HOME=/tmp npm install --cache /tmp/.npm --silent)
 
     case "$MODE" in
         watch)
             echo "   👀 Starting Tailwind watcher..."
-            (cd "$dir" && npm run watch) &
+            (cd "$dir" && HOME=/tmp npm run watch) &
             ;;
         build)
             echo "   🔨 Building Tailwind CSS..."
-            (cd "$dir" && npm run build)
+            (cd "$dir" && HOME=/tmp npm run build)
             echo "   ✅ Build complete"
             ;;
         *)
