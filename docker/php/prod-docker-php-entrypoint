@@ -21,7 +21,7 @@ if [ ! -z "$DB_HOST" ]; then
     # at build time in the Dockerfile. At runtime we only run setup:upgrade
     # with --keep-generated to preserve the compiled code from the build stage.
     php bin/magento setup:upgrade --keep-generated
-    php bin/magento app:config:import 2>/dev/null || true
+    php bin/magento app:config:import --no-interaction 2>/dev/null || true
 
     # Resolve MAGENTO_THEME to a numeric theme_id now that the DB is ready.
     # Writes to both core_config_data (for cron/CLI processes) and exports as
