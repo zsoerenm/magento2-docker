@@ -79,6 +79,15 @@ print(f'DOMAIN={domain}')
 theme = get("admin", "theme")
 if theme:
     print(f'MAGENTO_THEME={theme}')
+locale = get("admin", "locale")
+if locale:
+    print(f'MAGENTO_LOCALE={locale}')
+timezone = get("admin", "timezone")
+if timezone:
+    print(f'MAGENTO_TIMEZONE={timezone}')
+country = get("admin", "country")
+if country:
+    print(f'MAGENTO_COUNTRY={country}')
 
 # Staging access restriction
 staging_user = get("access", "username")

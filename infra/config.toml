@@ -47,6 +47,11 @@ admin_url_path = "admin_x7k9m"
 # Frontend theme by path (e.g. "Hyva/default"). Leave empty for Magento default (Luma).
 # The entrypoint resolves this to a numeric theme_id at runtime.
 theme = ""
+
+# Locale (e.g. "de_DE", "en_US"), timezone, country code
+locale = ""
+timezone = ""
+country = ""
 email = "admin@example.com"
 firstname = "Admin"
 lastname = "User"

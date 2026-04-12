@@ -56,6 +56,10 @@ x-magento-env: &magento-env
   # Set the frontend theme by path (e.g. Hyva/default, Magento/luma).
   # The entrypoint resolves this to a numeric theme_id at runtime.
   - MAGENTO_THEME=${MAGENTO_THEME:-}
+  # Locale / region
+  - CONFIG__DEFAULT__GENERAL__LOCALE__CODE=${MAGENTO_LOCALE:-en_US}
+  - CONFIG__DEFAULT__GENERAL__LOCALE__TIMEZONE=${MAGENTO_TIMEZONE:-UTC}
+  - CONFIG__DEFAULT__GENERAL__COUNTRY__DEFAULT=${MAGENTO_COUNTRY:-US}
 
 secrets:
   db_password:
