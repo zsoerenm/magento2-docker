@@ -52,6 +52,12 @@ if [ ! -z "$DB_HOST" ]; then
     fi
 
     php bin/magento cache:flush
+
+    # Strip trailing newline from deployed_version.txt — Magento embeds the raw
+    # content into static asset URLs, and a newline breaks every <link>/<script> tag.
+    if [ -f pub/static/deployed_version.txt ]; then
+        printf '%s' "$(cat pub/static/deployed_version.txt)" > pub/static/deployed_version.txt
+    fi
 fi
 
 # Signal that setup is complete and php-fpm can serve requests

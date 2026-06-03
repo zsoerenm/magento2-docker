@@ -86,6 +86,9 @@ RUN set -ex; \
 	&& (tailwind build 2>&1 || true) \
 	# Deploy static content (requires store/website/theme config in config.php) \
 	&& php bin/magento setup:static-content:deploy -f \
+	# Magento may write a trailing newline to deployed_version.txt which breaks \
+	# static asset URLs (the newline ends up in <link>/<script> href attributes). \
+	&& printf '%s' "$(cat pub/static/deployed_version.txt)" > pub/static/deployed_version.txt \
 	# Remove env.php stub created by di:compile — setup:install creates the real one at runtime \
 	&& rm -f app/etc/env.php
 
@@ -93,6 +96,9 @@ RUN set -ex; \
 FROM magento2-php AS magento2-php-production
 
 ENV MAGE_MODE=production
+
+# Disable opcache timestamp validation in production for performance
+RUN sed -i 's/opcache.validate_timestamps=1/opcache.validate_timestamps=0/' $PHP_INI_DIR/conf.d/opcache.ini
 
 COPY --from=composer:2.8.12 /usr/bin/composer /usr/bin/composer
 COPY --from=magento2-php-build --chown=www-data:www-data /var/www/html /var/www/html
